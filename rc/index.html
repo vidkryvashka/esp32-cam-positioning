@@ -2,58 +2,45 @@
 <html>
 
 <head>
-  <title>ESP32 WEB SERVER</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ESP32 Web Server</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    html {
+      font-family: Arial;
+      display: inline-block;
+      margin: 0px auto;
+      text-align: center;
+    }
 
-    <!-- <link rel="stylesheet" href="style.css"> -->
-    <style>
-      html {
-        font-family: Arial;
-        display: inline-block;
-        margin: 0px auto;
-        text-align: center;
-      }
+    h1 {
+      color: #070812;
+      padding: 2vh;
+    }
 
-      h1 {
-        color: #070812;
-        padding: 2vh;
-      }
+    .content {
+      padding: 50px;
+    }
 
-      .button {
-        display: inline-block;
-        background-color: #b30000; /* red color */
-        border: none;
-        border-radius: 4px;
-        color: white;
-        padding: 16px 40px;
-        text-decoration: none;
-        font-size: 30px;
-        margin: 2px;
-        cursor: pointer;
-      }
+    .card-grid {
+      max-width: 800px;
+      margin: 0 auto;
+      display: grid;
+      grid-gap: 2rem;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
 
-      .button2 {
-        background-color: #364cf4; /* blue color */
-      }
+    .card {
+      background-color: white;
+      box-shadow: 2px 2px 12px 1px rgba(140, 140, 140, .5);
+    }
 
-      .content {   padding: 50px;}.card-grid {  max-width: 800px;  margin: 0 auto;
-        display: grid;
-        grid-gap: 2rem;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      }
-
-      .card {
-        background-color: white;
-        box-shadow: 2px 2px 12px 1px rgba(140, 140, 140, .5);
-      }
-
-      .card-title {
-        font-size: 1.2rem;
-        font-weight: bold;
-        color: #034078
-      }
-    </style>
-    <link rel="icon" href="data:,">
+    .card-title {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #034078;
+    }
+  </style>
+  <link rel="icon" href="data:,">
 </head>
 
 <body>
@@ -61,47 +48,19 @@
   <div class="content">
     <div class="card-grid">
       <div class="card">
-        <p><i class="fas fa-lightbulb fa-2x" style="color:#c81919;"></i> <strong>GPIO2</strong></p>
-        <p>GPIO state: <strong id="led_status">LOADING...</strong></p>
-        <p>
-          <button class="button" onclick="toggleLED('on')">ON</button>
-          <button class="button button2" onclick="toggleLED('off')">OFF</button>
-        </p>
+        <p>Camera Stream:</p>
+        <img id="camera_image" src="" alt="Camera Stream" width="640">
       </div>
     </div>
-    <img id="camera_image" src="" alt="Camera Stream" width="640">
   </div>
 </body>
 
 <script>
-  function updateLEDStatus() {
-    var xhr = new XMLHttpRequest();
-    xhr.onreadystatechange = function() {
-      if (xhr.readyState == 4 && xhr.status == 200) {
-        document.getElementById('led_status').innerHTML = xhr.responseText;
-      }
-    };
-    xhr.open('GET', '/led_status', true);
-    xhr.send();
-  }
-
-  function toggleLED(action) {
-    var xhr = new XMLHttpRequest();
-    xhr.onreadystatechange = function() {
-      if (xhr.readyState == 4 && xhr.status == 200) {
-        updateLEDStatus();
-      }
-    };
-    xhr.open('GET', '/toggle_led?state=' + action, true);
-    xhr.send();
-  }
-  
   function updateImage() {
     var image = document.getElementById('camera_image');
     image.src = '/camera?time=' + new Date().getTime();
   }
 
-  setInterval(updateLEDStatus, 2000);
   setInterval(updateImage, 1000);
 </script>
 

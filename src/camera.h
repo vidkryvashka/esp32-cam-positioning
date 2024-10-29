@@ -80,7 +80,7 @@ static camera_config_t camera_config = {
     .grab_mode = CAMERA_GRAB_WHEN_EMPTY,
 };
 
-static esp_err_t init_camera(void)
+esp_err_t init_camera(void)
 {
     //initialize the camera
     esp_err_t err = esp_camera_init(&camera_config);
@@ -93,5 +93,39 @@ static esp_err_t init_camera(void)
     return ESP_OK;
 }
 #endif
+
+/*
+void start_camera(void) {
+#if ESP_CAMERA_SUPPORTED
+    if(ESP_OK != init_camera()) {
+        return;
+    }
+
+    while (1)
+    {
+        // ESP_LOGI(TAG, "Taking picture...");
+        camera_fb_t *pic = esp_camera_fb_get();
+
+        if (pic->format == PIXFORMAT_RGB565) {
+            size_t jpg_buf_len = 0;
+            uint8_t *jpg_buf = NULL;
+
+            // Convert the RGB565 image to JPEG
+            bool is_converted = frame2jpg(pic, 80, &jpg_buf, &jpg_buf_len);
+            esp_camera_fb_return(pic);
+                // You can now send `jpg_buf` with size `jpg_buf_len` via HTTP
+        }
+        // use pic->buf to access the image
+        ESP_LOGI(TAG, "Picture taken! Its size was: %zu bytes, width: %zu heigth: %zu format: %d",
+            pic->len, pic->width, pic->height, pic->format);
+
+        vTaskDelay(5000 / portTICK_RATE_MS);
+    }
+#else
+    ESP_LOGE(TAG, "Camera support is not available for this chip");
+    return;
+#endif
+}
+*/
 
 #endif

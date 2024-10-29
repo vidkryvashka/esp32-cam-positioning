@@ -27,11 +27,6 @@
 
 #include "index_html.h"
 
-
-// char resp[2048];
-
-int led_state = 0;
-
 #define EXAMPLE_ESP_WIFI_SSID CONFIG_ESP_WIFI_SSID
 #define EXAMPLE_ESP_WIFI_PASS CONFIG_ESP_WIFI_PASSWORD
 #define EXAMPLE_ESP_MAXIMUM_RETRY CONFIG_ESP_MAXIMUM_RETRY
@@ -77,7 +72,7 @@ static void event_handler(void *arg, esp_event_base_t event_base,
     }
 }
 
-void connect_wifi(void)
+static void connect_wifi(void)
 {
     s_wifi_event_group = xEventGroupCreate();
 
@@ -108,9 +103,6 @@ void connect_wifi(void)
         .sta = {
             .ssid = EXAMPLE_ESP_WIFI_SSID,
             .password = EXAMPLE_ESP_WIFI_PASS,
-            /* Setting a password implies station will connect to all security modes including WEP/WPA.
-             * However these modes are deprecated and not advisable to be used. Incase your Access point
-             * doesn't support WPA2, these mode can be enabled by commenting below line */
             .threshold.authmode = WIFI_AUTH_WPA2_PSK,
         },
     };
@@ -120,16 +112,12 @@ void connect_wifi(void)
 
     ESP_LOGI(TAG, "wifi_init_sta finished.");
 
-    /* Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum
-     * number of re-tries (WIFI_FAIL_BIT). The bits are set by event_handler() (see above) */
     EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
                                            WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
                                            pdFALSE,
                                            pdFALSE,
                                            portMAX_DELAY);
 
-    /* xEventGroupWaitBits() returns the bits before the call returned, hence we can test which event actually
-     * happened. */
     if (bits & WIFI_CONNECTED_BIT)
     {
         ESP_LOGI(TAG, "connected to ap SSID:%s password:%s",
@@ -147,53 +135,16 @@ void connect_wifi(void)
     vEventGroupDelete(s_wifi_event_group);
 }
 
-esp_err_t send_web_page(httpd_req_t *req) {
+static esp_err_t send_web_page(httpd_req_t *req) {
     return httpd_resp_send(req, (const char *)rc_index_html, rc_index_html_len);
 }
 
-esp_err_t get_req_handler(httpd_req_t *req)
+static esp_err_t get_req_handler(httpd_req_t *req)
 {
     return send_web_page(req);
 }
 
-esp_err_t led_status_handler(httpd_req_t *req)
-{
-    ESP_LOGI(TAG, "got status uri req");
-    char status[10];
-    if (led_state == 0) {
-        snprintf(status, sizeof(status), "OFF");
-    } else {
-        snprintf(status, sizeof(status), "ON");
-    }
-
-    httpd_resp_send(req, status, HTTPD_RESP_USE_STRLEN);
-    return ESP_OK;
-}
-
-esp_err_t toggle_led_handler(httpd_req_t *req) {
-    ESP_LOGI(TAG, "got led toggle uri req");
-    char query[32];
-    size_t query_len = httpd_req_get_url_query_len(req) + 1;
-
-    if (query_len > 1) {
-        httpd_req_get_url_query_str(req, query, query_len);
-        char param[8];
-        if (httpd_query_key_value(query, "state", param, sizeof(param)) == ESP_OK) {
-            if (strcmp(param, "on") == 0) {
-                gpio_set_level(GPIO_NUM_2, 1); // Вмикаємо LED
-            } else if (strcmp(param, "off") == 0) {
-                gpio_set_level(GPIO_NUM_2, 0); // Вимикаємо LED
-            }
-            httpd_resp_sendstr(req, "LED toggled");
-            return ESP_OK;
-        }
-    }
-    httpd_resp_send_404(req);
-    return ESP_FAIL;
-}
-
-
-esp_err_t jpg_handler(httpd_req_t *req) {
+static esp_err_t jpg_handler(httpd_req_t *req) {
     ESP_LOGI(TAG, "got jpg uri req");
     camera_fb_t *pic = esp_camera_fb_get();
     size_t jpg_buf_len = 0;
@@ -210,6 +161,7 @@ esp_err_t jpg_handler(httpd_req_t *req) {
         httpd_resp_set_type(req, "image/jpeg");
         // Send the JPEG buffer
         httpd_resp_send(req, (const char *)jpg_buf, jpg_buf_len);
+        ESP_LOGI(TAG, " -- sent picture -- ");
 
         // Free the buffer
         free(jpg_buf);
@@ -220,37 +172,21 @@ esp_err_t jpg_handler(httpd_req_t *req) {
     return ESP_FAIL;
 }
 
-httpd_uri_t uri_get = {
+static httpd_uri_t uri_get = {
     .uri = "/",
     .method = HTTP_GET,
     .handler = get_req_handler,
     .user_ctx = NULL
 };
 
-httpd_uri_t uri_toggle_led = {
-    .uri = "/toggle_led",
-    .method = HTTP_GET,
-    .handler = toggle_led_handler,
-    .user_ctx = NULL
-};
-
-
-httpd_uri_t uri_status = {
-    .uri = "/led_status",
-    .method = HTTP_GET,
-    .handler = led_status_handler,
-    .user_ctx = NULL
-};
-
-httpd_uri_t uri_camera = {
+static httpd_uri_t uri_camera = {
     .uri = "/camera",
     .method = HTTP_GET,
     .handler = jpg_handler,
     .user_ctx = NULL
 };
 
-
-httpd_handle_t setup_server(void)
+static httpd_handle_t setup_server(void)
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     httpd_handle_t server = NULL;
@@ -258,13 +194,38 @@ httpd_handle_t setup_server(void)
     if (httpd_start(&server, &config) == ESP_OK)
     {
         httpd_register_uri_handler(server, &uri_get);
-        httpd_register_uri_handler(server, &uri_toggle_led);
-        httpd_register_uri_handler(server, &uri_status);
         httpd_register_uri_handler(server, &uri_camera);
     }
-
 
     return server;
 }
 
 #endif
+
+
+void server_up(void) {
+        // Initialize NVS
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
+
+    ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
+    connect_wifi();
+
+    // GPIO initialization
+    gpio_reset_pin(LED_PIN);
+    gpio_set_direction(LED_PIN, GPIO_MODE_OUTPUT);
+    ESP_LOGI(TAG, "LED Control Web Server is running ... ...\n");
+    setup_server();
+    ESP_LOGI(TAG, "\nserver is up, good boiii\n");
+
+    if(ESP_OK != init_camera()) {
+        return;
+    }
+
+
+}
