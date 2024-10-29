@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "*.ejs": "html",
+        "*.tcc": "cpp",
+        "compare": "cpp",
+        "webserver.h": "c",
+        "sockets.h": "c",
+        "gpio.h": "c"
+    }
+}
