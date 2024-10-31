@@ -5,4 +5,7 @@
 .vscode/ipch
 sdkconfig.esp32cam
 
+# lib sub repo brackes git, https://github.com/espressif/esp32-camera.git
+lib/esp32-camera-latest
+
 unused
