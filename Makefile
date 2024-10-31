@@ -9,3 +9,4 @@ all:
 
 flash: all
 	platformio run --target upload --upload-port /dev/$(SERIAL_PORT)
+
