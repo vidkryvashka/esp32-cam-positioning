@@ -25,4 +25,7 @@
 void app_main(void)
 {
     server_up();
+    if(ESP_OK != init_camera()) {
+        return;
+    }
 }
