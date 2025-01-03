@@ -2,6 +2,10 @@
     "files.associations": {
         "*.ejs": "html",
         "atomic": "cpp",
-        "cstdint": "cpp"
+        "cstdint": "cpp",
+        "img_converters.h": "c",
+        "esp_camera.h": "c",
+        "defs.h": "c",
+        "camera.h": "c"
     }
 }

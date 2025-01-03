@@ -1,5 +1,5 @@
 /**
- * This example takes a picture every 5s and print its size on serial monitor.
+ * This example was taking a picture every 5s and printed its size on serial monitor.
  */
 
 #include <esp_log.h>
@@ -18,7 +18,7 @@
 #endif
 
 #include "defs.h"
-#include "camera.h"
+// #include "camera.h"
 #include "webserver.h"
 
 
