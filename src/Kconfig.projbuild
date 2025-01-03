@@ -249,13 +249,67 @@ endmenu
 
 menu "WiFi Configuration"
 
-    config ESP_WIFI_SSID
+    config ESP_WIFI_POINTS_NUMBER
+        int "Points number"
+        default 5
+        help
+            Number of WiFi points SSIDs passwords
+
+    config ESP_WIFI_SSID_0
         string "WiFi SSID"
         default "myssid"
         help
             SSID (network name) for the example to connect to.
 
-    config ESP_WIFI_PASSWORD
+    config ESP_WIFI_PASSWORD_0
+        string "WiFi Password"
+        default "mypassword"
+        help
+            WiFi password (WPA or WPA2) for the example to use.
+    
+    config ESP_WIFI_SSID_1
+        string "WiFi SSID"
+        default "myssid"
+        help
+            SSID (network name) for the example to connect to.
+
+    config ESP_WIFI_PASSWORD_1
+        string "WiFi Password"
+        default "mypassword"
+        help
+            WiFi password (WPA or WPA2) for the example to use.
+
+    config ESP_WIFI_SSID_2
+        string "WiFi SSID"
+        default "myssid"
+        help
+            SSID (network name) for the example to connect to.
+
+    config ESP_WIFI_PASSWORD_2
+        string "WiFi Password"
+        default "mypassword"
+        help
+            WiFi password (WPA or WPA2) for the example to use.
+    
+    config ESP_WIFI_SSID_3
+        string "WiFi SSID"
+        default "myssid"
+        help
+            SSID (network name) for the example to connect to.
+
+    config ESP_WIFI_PASSWORD_3
+        string "WiFi Password"
+        default "mypassword"
+        help
+            WiFi password (WPA or WPA2) for the example to use.
+
+    config ESP_WIFI_SSID_4
+        string "WiFi SSID"
+        default "myssid"
+        help
+            SSID (network name) for the example to connect to.
+
+    config ESP_WIFI_PASSWORD_4
         string "WiFi Password"
         default "mypassword"
         help
