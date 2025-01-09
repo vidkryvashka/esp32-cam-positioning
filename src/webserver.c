@@ -1,10 +1,6 @@
 #include "webserver.h"
 #include "index_html.h"
 
-// #define EXAMPLE_ESP_WIFI_SSID CONFIG_ESP_WIFI_SSID
-// #define EXAMPLE_ESP_WIFI_PASS CONFIG_ESP_WIFI_PASSWORD
-#define EXAMPLE_ESP_MAXIMUM_RETRY CONFIG_ESP_MAXIMUM_RETRY
-
 /* The event group allows multiple bits for each event, but we only care about two events:
  * - we are connected to the AP with an IP
  * - we failed to connect after the maximum amount of retries */
@@ -19,7 +15,7 @@ static int s_retry_num = 0;
 static void event_handler(void *arg, esp_event_base_t event_base,
                           int32_t event_id, void *event_data)
 {
-    ESP_LOGI(TAG, "inside event_handler, event_base: %s event_id = %ld", event_base, event_id);
+    // ESP_LOGI(TAG, "Івент затронуто: base=%s, id=%ld", event_base, event_id);
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
     {
         esp_wifi_connect();
@@ -30,19 +26,18 @@ static void event_handler(void *arg, esp_event_base_t event_base,
         {
             esp_wifi_connect();
             s_retry_num++;
-            ESP_LOGI(TAG, "retry to connect to the AP");
+            ESP_LOGI(TAG, "retry to connect to the AP ");
         }
         else
         {
             xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
         }
-        ESP_LOGI(TAG, "connect to the AP fail");
+        ESP_LOGI(TAG, "connect to the AP fail ");
     }
     else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
     {
         ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
         ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
-        s_retry_num = 0;
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
     }
 }
@@ -51,8 +46,6 @@ static void event_handler(void *arg, esp_event_base_t event_base,
 static void form_wifi_points(wifi_sta_config_t *wifi_points)
 {
     wifi_sta_config_t wifi_point_0 = {
-        // .ssid = "lastivky_romashky", // CONFIG_ESP_WIFI_SSID_0,
-        // .password = "vyshni_chereshni", // CONFIG_ESP_WIFI_PASSWORD_0,
         .ssid = CONFIG_ESP_WIFI_SSID_0,
         .password = CONFIG_ESP_WIFI_PASSWORD_0,
         .threshold.authmode = WIFI_AUTH_WPA2_PSK,
@@ -103,7 +96,6 @@ static esp_err_t find_wifi() {
         wifi_config_t wifi_config = {
             .sta = wifi_points[index],
         };
-
         ESP_LOGI(TAG, "Trying to connect to SSID: %s, Password: %s (index: %d)",
                  wifi_points[index].ssid, wifi_points[index].password, index);
 
@@ -111,6 +103,7 @@ static esp_err_t find_wifi() {
 
         ESP_ERROR_CHECK(esp_wifi_start());
 
+        s_retry_num = 0;
         EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
                                                WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
                                                pdTRUE,
@@ -124,18 +117,18 @@ static esp_err_t find_wifi() {
         }
         else if (bits & WIFI_FAIL_BIT) {
             ESP_LOGW(TAG, "Failed to connect to SSID: %s", wifi_points[index].ssid);
+            led_blink(1, 2);
         } else {
             ESP_LOGE(TAG, "Unexpected event during Wi-Fi connection.");
         }
 
-        if (!connected)
+        if (!connected) {
             ESP_ERROR_CHECK(esp_wifi_stop());
+        }
+        // vTaskDelay(pdMS_TO_TICKS(100));
 
     }
 
-    if (err) {
-        ESP_LOGE(TAG, "All Wi-Fi connection attempts failed.");
-    }
     return err;
 }
 
@@ -147,7 +140,7 @@ static esp_err_t connect_wifi(void)
 
     ESP_ERROR_CHECK(esp_netif_init());
 
-    ESP_ERROR_CHECK(esp_event_loop_create_default());   // тут в старому коді виникала помилка
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_create_default_wifi_sta();
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
@@ -171,6 +164,9 @@ static esp_err_t connect_wifi(void)
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
 
     err = find_wifi();
+    if (err) {
+        ESP_LOGE(TAG, "All Wi-Fi connection attempts failed.");
+    }
 
     vEventGroupDelete(s_wifi_event_group);
     return err;
@@ -251,7 +247,7 @@ static httpd_handle_t setup_server(void)
 
 esp_err_t server_up(void) {
     esp_err_t err = ESP_FAIL;
-        // Initialize NVS
+    // Initialize NVS
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
     {
@@ -263,17 +259,15 @@ esp_err_t server_up(void) {
     ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
     esp_err_t wifi_err = connect_wifi();
 
-    // GPIO initialization
-    gpio_reset_pin(LED_PIN);
-    gpio_set_direction(LED_PIN, GPIO_MODE_OUTPUT);
-    ESP_LOGI(TAG, "LED Control Web Server is running ... ...\n");
-
     if (!wifi_err) {
         setup_server();
         ESP_LOGI(TAG, "\n Server must be up, good boy \n");
         err = ESP_OK;
-    } else
+        led_blink(0.3, 10);
+    } else {
         ESP_LOGE(TAG, "\n Server not started \n");
+        led_blink(3, 3);
+    }
     
     return err;
 }

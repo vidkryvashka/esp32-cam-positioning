@@ -6,6 +6,8 @@
         "img_converters.h": "c",
         "esp_camera.h": "c",
         "defs.h": "c",
-        "camera.h": "c"
+        "camera.h": "c",
+        "gpio.h": "c",
+        "webserver.h": "c"
     }
 }
