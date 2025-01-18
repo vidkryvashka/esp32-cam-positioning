@@ -2,6 +2,7 @@
 #include "camera.h"
 #include "webserver.h"
 #include "index_html.h"
+#include "mdns.h"
 
 static esp_err_t send_web_page(httpd_req_t *req)
 {
