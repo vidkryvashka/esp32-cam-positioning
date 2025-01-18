@@ -6,51 +6,62 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     html {
-      font-family: Arial;
-      display: inline-block;
-      margin: 0px auto;
-      text-align: center;
+      font-family: 'Arial', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(145deg, #000, #111);
+      color: #ccc;
+      min-height: 100vh;
     }
 
-    h1 {
-      color: #070812;
-      padding: 2vh;
+    h2 {
+      color: #fff;
+      font-size: 2rem;
+      margin-bottom: 1.5rem;
     }
 
     .content {
-      padding: 50px;
-    }
-
-    .card-grid {
-      max-width: 800px;
-      margin: 0 auto;
-      display: grid;
-      grid-gap: 2rem;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      text-align: center;
+      padding: 2rem;
     }
 
     .card {
-      background-color: white;
-      box-shadow: 2px 2px 12px 1px rgba(140, 140, 140, .5);
+      background: #222;
+      box-shadow: 0 0 2rem rgba(0, 0, 0, 0.8);
+      border-radius: 1rem;
+      padding: 2rem;
+      max-width: 40rem;
+      margin: 0 auto;
     }
 
     .card-title {
-      font-size: 1.2rem;
+      font-size: 1.5rem;
       font-weight: bold;
-      color: #034078;
+      color: #4fc3f7;
+      margin-bottom: 1rem;
+    }
+
+    #camera_image {
+      width: 100%;
+      /* max-height: 20rem; */
+      height: 480px;
+      width: 640px;
+      border-radius: 1rem;
+      object-fit: cover;
     }
   </style>
   <link rel="icon" href="data:,">
 </head>
 
 <body>
-  <h2>ESP32 WEB SERVER</h2>
   <div class="content">
-    <div class="card-grid">
-      <div class="card">
-        <p>Camera Stream:</p>
-        <img id="camera_image" src="" alt="Camera Stream" width="640">
-      </div>
+    <h2>ESP32 Web Server</h2>
+    <div class="card">
+      <p class="card-title">Camera Stream</p>
+      <img id="camera_image" src="" alt="Camera Stream">
     </div>
   </div>
 </body>

@@ -10,6 +10,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
+#include "driver/temperature_sensor.h"
 
 // support IDF 5.x
 #ifndef portTICK_RATE_MS
@@ -26,14 +27,13 @@
 #define LED_PIN 33
 #define BLINK_PERIOD pdMS_TO_TICKS(150)
 
-#define GPIO_INIT()                                     \
-    gpio_reset_pin(LED_PIN);                            \
-    gpio_set_direction(LED_PIN, GPIO_MODE_OUTPUT);      \
-    gpio_set_level(LED_PIN, 1);
 
 // idk why on is 0 and off is 1
 #define LED_ON()    gpio_set_level(LED_PIN, 0)
 #define LED_OFF()   gpio_set_level(LED_PIN, 1)
+
+
+esp_err_t init_esp_things(void);
 
 
 /**
@@ -43,5 +43,6 @@
  * @param count how many times LED will blint with that period
  */
 void led_blink(float periods, uint8_t count);
+
 
 #endif

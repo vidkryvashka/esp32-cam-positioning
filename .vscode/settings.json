@@ -8,6 +8,19 @@
         "defs.h": "c",
         "camera.h": "c",
         "gpio.h": "c",
-        "webserver.h": "c"
+        "webserver.h": "c",
+        "esp_system.h": "c",
+        "temp_sensor.h": "c",
+        "index_html.h": "c",
+        "temp_sensor_types_legacy.h": "c",
+        "task.h": "c",
+        "freertos.h": "c",
+        "temperature_sensor.h": "c",
+        "temperature_sensor_types.h": "c",
+        "string.h": "c",
+        "nvs_flash.h": "c",
+        "esp_log.h": "c",
+        "param.h": "c",
+        "wifi.h": "c"
     }
 }

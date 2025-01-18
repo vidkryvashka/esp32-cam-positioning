@@ -41,7 +41,7 @@ static camera_config_t camera_config = {
     .frame_size = FRAMESIZE_QVGA,    //QQVGA-UXGA, For ESP32, do not use sizes above QVGA when not JPEG. The performance of the ESP32-S series has improved a lot, but JPEG mode always gives better frame rates.
 
     .jpeg_quality = 12, //0-63, for OV series camera sensors, lower number means higher quality
-    .fb_count = 1,       //When jpeg mode is used, if fb_count more than one, the driver will work in continuous mode.
+    .fb_count = 1,      //When jpeg mode is used, if fb_count more than one, the driver will work in continuous mode.
     .grab_mode = CAMERA_GRAB_WHEN_EMPTY,
 };
 
@@ -58,8 +58,36 @@ esp_err_t init_camera(void)
     return ESP_OK;
 }
 
+int get_pixel_value(camera_fb_t *frame, size_t x, size_t y) {
+    if (frame->format != PIXFORMAT_RGB565) {
+        perror("get_pixel_value wrong PIXFORMAT");
+        return -1;
+    }
+
+    if (x >= frame->width || y >= frame->height) {
+        perror("Coordinates out of bounds!");
+        return -1;
+    }
+
+    // frame->buf is (uint8_t *)
+    uint16_t *pixel_data = (uint16_t *)frame->buf;
+    // Calculate the index in the buffer
+    size_t index = y * frame->width + x;
+    uint16_t pixel = pixel_data[index];
+
+    // Each pixel is 2 bytes in RGB565
+    // bits per colors RRRRRGGG GGGBBBBB
+    // Extract R, G, B components
+    uint8_t r = (pixel >> 11) & 0x1F; // 5 bits for red
+    uint8_t g = (pixel >> 5) & 0x3F;  // 6 bits for green
+    uint8_t b = pixel & 0x1F;         // 5 bits for blue
+    printf("RGB565 Pixel at (%zu, %zu): R=%d, G=%d, B=%d\n", x, y, r, g, b);
+
+    return 0;
+}
+
 /*
-void start_camera(void) {
+void start_camera(void) {q
 #if ESP_CAMERA_SUPPORTED
     if(ESP_OK != init_camera()) {
         return;

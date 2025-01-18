@@ -9,9 +9,9 @@
 #include "spi_flash_mmap.h" // #include "esp_spi_flash.h" // #include "esp_system.h" replacement chain, deprecated
 #include <esp_http_server.h>
 
-#include "esp_wifi.h"
-#include "esp_event.h"
-#include "freertos/event_groups.h"
+// #include "esp_wifi.h"
+// #include "esp_event.h"
+// #include "freertos/event_groups.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
 #include "esp_netif.h"
@@ -22,7 +22,8 @@
 #include <lwip/netdb.h>
 
 #include "defs.h"
-#include "camera.h"
+// #include "wifi.h"
+// #include "camera.h"
 
 // #include "index_html.h"
 

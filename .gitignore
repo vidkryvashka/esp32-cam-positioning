@@ -7,7 +7,10 @@ sdkconfig.esp32cam
 sdkconfig.esp32cam.old
 
 # lib sub repo brackes git, https://github.com/espressif/esp32-camera.git
-lib/esp32-camera-2.0.13
+# lib/esp32-camera-2.0.13
+# components/*
+lib/*
+components/esp32-camera*
 
 unused
 
