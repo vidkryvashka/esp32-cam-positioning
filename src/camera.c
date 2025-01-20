@@ -13,6 +13,10 @@
 #include "defs.h"
 #include "camera.h"
 
+#ifndef TAG
+#define TAG "esp_camera"
+#endif
+
 static camera_config_t camera_config = {
     .pin_pwdn = CAM_PIN_PWDN,
     .pin_reset = CAM_PIN_RESET,
@@ -58,7 +62,7 @@ esp_err_t init_camera(void)
     return ESP_OK;
 }
 
-int get_pixel_value(camera_fb_t *frame, size_t x, size_t y) {
+esp_err_t print_pixel_value(camera_fb_t *frame, size_t x, size_t y) {
     if (frame->format != PIXFORMAT_RGB565) {
         perror("get_pixel_value wrong PIXFORMAT");
         return -1;
@@ -83,7 +87,7 @@ int get_pixel_value(camera_fb_t *frame, size_t x, size_t y) {
     uint8_t b = pixel & 0x1F;         // 5 bits for blue
     printf("RGB565 Pixel at (%zu, %zu): R=%d, G=%d, B=%d\n", x, y, r, g, b);
 
-    return 0;
+    return ESP_OK;
 }
 
 /*

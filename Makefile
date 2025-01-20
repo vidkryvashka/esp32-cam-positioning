@@ -1,5 +1,5 @@
 HTML_RC_FILE = rc/index.html
-HTML_H_FILE = src/index_html.h
+HTML_H_FILE = include/server/index_html.h
 SERIAL_PORT = /dev/cu.usbserial-120
 PIO_ENV = /Users/user/.platformio/penv/bin/activate
 CAMERA_LIB = lib/esp32-camera-latest

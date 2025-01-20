@@ -10,29 +10,23 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
-#include "driver/temperature_sensor.h"
-
-// support IDF 5.x
-#ifndef portTICK_RATE_MS
-#define portTICK_RATE_MS portTICK_PERIOD_MS
-#endif
 
 // TAG for debug
 // extern char *TAG; //  = "espressif";
-#define TAG "espressif"
+// #define TAG "espressif"
 
 
-// LED BLINKING moments
-
-#define LED_PIN 33
-#define BLINK_PERIOD pdMS_TO_TICKS(150)
-
+#define BOARD "esp32"
 
 // idk why on is 0 and off is 1
 #define LED_ON()    gpio_set_level(LED_PIN, 0)
 #define LED_OFF()   gpio_set_level(LED_PIN, 1)
 
 
+
+/** 
+ * @brief inits gpio, nvs_flash
+ */
 esp_err_t init_esp_things(void);
 
 

@@ -21,6 +21,8 @@
         "nvs_flash.h": "c",
         "esp_log.h": "c",
         "param.h": "c",
-        "wifi.h": "c"
+        "wifi.h": "c",
+        "setting_mdns.h": "c",
+        "spi_flash_mmap.h": "c"
     }
 }

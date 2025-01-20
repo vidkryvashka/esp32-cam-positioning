@@ -1,5 +1,9 @@
-#include "wifi.h"
-// #include "mdns.h"
+#include "server/wifi.h"
+#include "server/setting_mdns.h"
+
+#ifndef TAG
+#define TAG "esp_wifi"
+#endif
 
 /* FreeRTOS event group to signal when we are connected */
 static EventGroupHandle_t s_wifi_event_group;
@@ -79,14 +83,19 @@ static void form_wifi_points(wifi_sta_config_t *wifi_points)
 
 static esp_err_t find_wifi() {
     esp_err_t err = ESP_FAIL;
-    wifi_sta_config_t wifi_points[CONFIG_ESP_WIFI_POINTS_NUMBER];
+    wifi_sta_config_t wifi_points[CONFIG_ESP_WIFI_MAX_POINTS_NUMBER];
     form_wifi_points(wifi_points);
 
     for (
         int index = 0, connected = 0;
-        !connected && index < CONFIG_ESP_WIFI_POINTS_NUMBER;
+        // !connected && index < CONFIG_ESP_WIFI_POINTS_NUMBER;
+        !connected;
         ++ index
     ) {
+    
+        if (index > CONFIG_ESP_WIFI_POINTS_NUMBER)
+            index = 0;
+        
         wifi_config_t wifi_config = {
             .sta = wifi_points[index],
         };
@@ -124,7 +133,6 @@ static esp_err_t find_wifi() {
     return err;
 }
 
-
 esp_err_t connect_wifi(void)
 {
     esp_err_t err = ESP_FAIL;
@@ -134,7 +142,7 @@ esp_err_t connect_wifi(void)
 
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_t *netif = esp_netif_create_default_wifi_sta();
-    esp_netif_set_hostname(netif, "esp32-server");
+    esp_netif_set_hostname(netif, "esp32");
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
@@ -160,6 +168,7 @@ esp_err_t connect_wifi(void)
     if (err) {
         ESP_LOGE(TAG, "All Wi-Fi connection attempts failed.");
     }
+    set_mdns();
 
     vEventGroupDelete(s_wifi_event_group);
     return err;
