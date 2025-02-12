@@ -23,6 +23,7 @@
 #include "server/webserver.h"
 #include "server/index_html.h"
 #include "camera.h"
+#include "find_sun.h"
 
 #ifndef TAG
 #define TAG "esp_webserver"
@@ -44,17 +45,20 @@ static esp_err_t jpg_handler(httpd_req_t *req)
 {
     ESP_LOGI(TAG, "got jpg uri req");
 
-    camera_fb_t *pic = esp_camera_fb_get();
-    if (!pic) {
+    camera_fb_t *frame = esp_camera_fb_get();
+    if (!frame) {
         httpd_resp_send_500(req);
         return ESP_FAIL;
     }
 
     esp_err_t err = ESP_FAIL;
-    if (pic->format == PIXFORMAT_RGB565) {
+    if (frame->format == PIXFORMAT_RGB565) {
+
+        esp_err_t err_marked_sun = mark_sun(frame);
+
         uint8_t *jpg_buf = NULL;
         size_t jpg_buf_len = 0;
-        if (frame2jpg(pic, 80, &jpg_buf, &jpg_buf_len)) {
+        if (frame2jpg(frame, 80, &jpg_buf, &jpg_buf_len)) {
             httpd_resp_set_type(req, "image/jpeg");
             err = httpd_resp_send(req, (const char *)jpg_buf, jpg_buf_len);
             // ESP_LOGI(TAG, "Free heap: %lu , min_free: %lu bytes", esp_get_free_heap_size(), esp_get_minimum_free_heap_size());
@@ -71,46 +75,9 @@ static esp_err_t jpg_handler(httpd_req_t *req)
     if (err == ESP_OK)  
         ESP_LOGI(TAG, " -- sent picture -- ");
 
-    esp_camera_fb_return(pic);
+    esp_camera_fb_return(frame);
     return err;
 }
-
-
-// static esp_err_t jpg_handler(httpd_req_t *req)
-// {
-//     esp_err_t err = ESP_FAIL;
-//     ESP_LOGI(TAG, "got jpg uri req");
-//     camera_fb_t *pic = esp_camera_fb_get();
-//     if (!pic) {
-//         httpd_resp_send_500(req);
-//         return ESP_FAIL;
-//     }
-// 
-//     if (pic->format == PIXFORMAT_JPEG) {
-//         uint8_t *jpg_buf = NULL;
-//         size_t jpg_buf_len = 0;
-//         bool converted = frame2jpg(pic, 80, &jpg_buf, &jpg_buf_len);
-//         if (!converted) {
-//             httpd_resp_send_500(req);
-//             return ESP_FAIL;
-//         }
-// 
-//         // Set response content type to image/jpeg
-//         httpd_resp_set_type(req, "image/jpeg");
-//         // Send the JPEG buffer
-//         httpd_resp_send(req, (const char *)jpg_buf, jpg_buf_len);
-//         ESP_LOGI(TAG, " -- sent picture -- ");
-// 
-//         // Free the buffer
-//         free(jpg_buf);
-//         err = ESP_OK;
-//     }
-//     esp_camera_fb_return(pic);
-//     httpd_resp_send_500(req);
-// 
-//     esp_err_t err = ESP_OK;
-//     return err;
-// }
 
 
 static httpd_uri_t uri_get = {

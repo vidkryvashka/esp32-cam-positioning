@@ -53,8 +53,7 @@ esp_err_t init_camera(void)
 {
     //initialize the camera
     esp_err_t err = esp_camera_init(&camera_config);
-    if (err != ESP_OK)
-    {
+    if (err != ESP_OK) {
         ESP_LOGE(TAG, "Camera Init Failed");
         return err;
     }
@@ -89,6 +88,17 @@ esp_err_t print_pixel_value(camera_fb_t *frame, size_t x, size_t y) {
 
     return ESP_OK;
 }
+
+
+
+
+
+
+
+
+
+
+
 
 /*
 void start_camera(void) {q

@@ -29,6 +29,8 @@
  */
 esp_err_t init_esp_things(void);
 
+// bool esp_camera_inited = false;
+
 
 /**
  * @brief Blinks with led. Led pin defined as LED_PIN
