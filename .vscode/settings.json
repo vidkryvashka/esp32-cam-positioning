@@ -23,6 +23,9 @@
         "param.h": "c",
         "wifi.h": "c",
         "setting_mdns.h": "c",
-        "spi_flash_mmap.h": "c"
-    }
+        "spi_flash_mmap.h": "c",
+        "math.h": "c",
+        "compare": "c"
+    },
+    "C_Cpp.errorSquiggles": "disabled"
 }
