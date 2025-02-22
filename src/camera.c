@@ -84,7 +84,7 @@ esp_err_t init_camera(void)
     return ESP_OK;
 }
 
-esp_err_t print_pixel_value(camera_fb_t *frame, size_t x, size_t y) {
+esp_err_t print_pixel_value(camera_fb_t *frame, uint8_t x, uint8_t y) {
     if (frame->format != PIXFORMAT_RGB565) {
         perror("get_pixel_value wrong PIXFORMAT");
         return -1;
@@ -98,7 +98,7 @@ esp_err_t print_pixel_value(camera_fb_t *frame, size_t x, size_t y) {
     // frame->buf is (uint8_t *)
     uint16_t *pixel_data = (uint16_t *)frame->buf;
     // Calculate the index in the buffer
-    size_t index = y * frame->width + x;
+    uint16_t index = y * frame->width + x;
     uint16_t pixel = pixel_data[index];
 
     // Each pixel is 2 bytes in RGB565

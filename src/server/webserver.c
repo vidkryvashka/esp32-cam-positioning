@@ -50,8 +50,8 @@ static esp_err_t form_json(char *metadata, uint16_t metadata_size, max_brightnes
                     sun_positions->center_coord.y);
 
     // Додаємо координати
-    char coord_buf[128];
-    for (size_t i = 0; i < sun_positions->count; i++) {
+    char coord_buf[32];
+    for (uint8_t i = 0; i < sun_positions->count; i++) {
         snprintf(coord_buf, sizeof(coord_buf), 
                 "{\"x\":%zu,\"y\":%zu}%s",
                 sun_positions->coords[i].x,

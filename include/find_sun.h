@@ -5,9 +5,12 @@
 #include "defs.h"
 #include "camera.h"
 
+/**
+ * @brief holds small coords uint8_t
+ */
 typedef struct {
-    size_t x;
-    size_t y;
+    uint8_t x;
+    uint8_t y;
 } pixel_coordinate_t;
 
 /**
@@ -15,8 +18,8 @@ typedef struct {
  */
 typedef struct {
     pixel_coordinate_t *coords;
-    size_t count;
-    size_t capacity;
+    uint16_t count;
+    uint16_t capacity;
     pixel_coordinate_t center_coord;
 } max_brightness_pixels_t;
 

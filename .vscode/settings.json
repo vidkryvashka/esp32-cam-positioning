@@ -29,7 +29,8 @@
         "cjson.h": "c",
         "esp_netif.h": "c",
         "stddef.h": "c",
-        "cstdlib": "c"
+        "cstdlib": "c",
+        "find_sun.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }
