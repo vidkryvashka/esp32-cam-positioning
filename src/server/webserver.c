@@ -12,6 +12,9 @@
 #include "nvs_flash.h"
 #include "esp_netif.h"
 #include "driver/gpio.h"
+#include "cJSON.h"
+// #include "base64.h"
+#include <stddef.h>
 #include <lwip/sockets.h>
 #include <lwip/sys.h>
 #include <lwip/api.h>
@@ -29,20 +32,39 @@
 #define TAG "esp_webserver"
 #endif
 
-static esp_err_t send_web_page(httpd_req_t *req)
-{
-    return httpd_resp_send(req, (const char *)rc_index_html, rc_index_html_len);
+static esp_err_t send_web_page(httpd_req_t *req) {
+    return httpd_resp_send(req, (const char *)frontend_index_html, frontend_index_html_len);
 }
 
 
-static esp_err_t get_req_handler(httpd_req_t *req)
-{
+static esp_err_t get_req_handler(httpd_req_t *req) {
     return send_web_page(req);
 }
 
 
-static esp_err_t jpg_handler(httpd_req_t *req)
-{
+static esp_err_t form_json(char *metadata, uint16_t metadata_size, max_brightness_pixels_t *sun_positions) {
+    snprintf(metadata, metadata_size, 
+                    "{\"count\":%zu,\"center\":{\"x\":%zu,\"y\":%zu},\"coords\":[", 
+                    sun_positions->count,
+                    sun_positions->center_coord.x,
+                    sun_positions->center_coord.y);
+
+    // Додаємо координати
+    char coord_buf[128];
+    for (size_t i = 0; i < sun_positions->count; i++) {
+        snprintf(coord_buf, sizeof(coord_buf), 
+                "{\"x\":%zu,\"y\":%zu}%s",
+                sun_positions->coords[i].x,
+                sun_positions->coords[i].y,
+                i < sun_positions->count - 1 ? "," : "");
+        strcat(metadata, coord_buf);
+    }
+    strcat(metadata, "]}");
+    return ESP_OK;
+}
+
+
+static esp_err_t jpg_handler(httpd_req_t *req) {
     ESP_LOGI(TAG, "got jpg uri req");
 
     camera_fb_t *frame = esp_camera_fb_get();
@@ -53,27 +75,35 @@ static esp_err_t jpg_handler(httpd_req_t *req)
 
     esp_err_t err = ESP_FAIL;
     if (frame->format == PIXFORMAT_RGB565) {
-
-        esp_err_t err_marked_sun = mark_sun(frame);
+        max_brightness_pixels_t *sun_positions = mark_sun(frame);
 
         uint8_t *jpg_buf = NULL;
         size_t jpg_buf_len = 0;
         if (frame2jpg(frame, 80, &jpg_buf, &jpg_buf_len)) {
+            // Конвертуємо дані в JSON
+            const uint16_t metadata_size = 512;
+            char metadata[metadata_size];
+            form_json(metadata, metadata_size, sun_positions);
+
+            // Встановлюємо заголовки
             httpd_resp_set_type(req, "image/jpeg");
+            httpd_resp_set_hdr(req, "sun-coords", metadata);
+            
             err = httpd_resp_send(req, (const char *)jpg_buf, jpg_buf_len);
-            // ESP_LOGI(TAG, "Free heap: %lu , min_free: %lu bytes", esp_get_free_heap_size(), esp_get_minimum_free_heap_size());
             free(jpg_buf);
         } else {
             ESP_LOGE(TAG, "JPEG conversion failed");
             httpd_resp_send_500(req);
         }
+        free(sun_positions->coords);
+        free(sun_positions);
     } else {
         ESP_LOGE(TAG, "Unsupported format");
         httpd_resp_send_500(req);
     }
 
     if (err == ESP_OK)  
-        ESP_LOGI(TAG, " -- sent picture -- ");
+        ESP_LOGI(TAG, " -- sent picture and metadata -- ");
 
     esp_camera_fb_return(frame);
     return err;
@@ -96,8 +126,7 @@ static httpd_uri_t uri_camera = {
 };
 
 
-static httpd_handle_t setup_server(void)
-{
+static httpd_handle_t setup_server(void) {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     httpd_handle_t server = NULL;
 

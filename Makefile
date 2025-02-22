@@ -1,4 +1,4 @@
-HTML_RC_FILE = rc/index.html
+HTML_FRONTEND_FILE = frontend/index.html
 HTML_H_FILE = include/server/index_html.h
 SERIAL_PORT = /dev/cu.usbserial-120
 PIO_ENV = /Users/user/.platformio/penv/bin/activate
@@ -7,10 +7,9 @@ SRC = src
 BUILD_DIR = .pio/build
 
 
-
-$(HTML_H_FILE): $(HTML_RC_FILE)
-	@echo "Generating $(HTML_H_FILE) from $(HTML_RC_FILE)"
-	xxd -i $(HTML_RC_FILE) > $(HTML_H_FILE)
+$(HTML_H_FILE): $(HTML_FRONTEND_FILE)
+	@echo "Generating $(HTML_H_FILE) from $(HTML_FRONTEND_FILE)"
+	xxd -i $(HTML_FRONTEND_FILE) > $(HTML_H_FILE)
 
 $(BUILD_DIR): $(SRC) $(HTML_H_FILE)
 	platformio run

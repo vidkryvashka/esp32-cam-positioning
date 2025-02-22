@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ESP32 Web Server</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    html {
+      font-family: 'Arial', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(145deg, #000, #111);
+      color: #ccc;
+      min-height: 100vh;
+    }
+    h2 {
+      color: #fff;
+      font-size: 2rem;
+      margin-bottom: 1.5rem;
+    }
+    .content {
+      text-align: center;
+      padding: 2rem;
+    }
+    .card {
+      background: #222;
+      box-shadow: 0 0 2rem rgba(0, 0, 0, 0.8);
+      border-radius: 1rem;
+      padding: 2rem;
+      max-width: 40rem;
+      margin: 0 auto;
+      position: relative;
+    }
+    .card-title {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #4fc3f7;
+      margin-bottom: 1rem;
+    }
+    #camera-feed {
+      width: 100%;
+      height: 480px;
+      width: 480px;
+      object-fit: cover;
+      display: block;
+    }
+    #overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 480px;
+      width: 480px;
+      pointer-events: none;
+    }
+  </style>
+  <link rel="icon" href="data:,">
+</head>
+<body>
+  <div class="content">
+    <h2>ESP32 Web Server</h2>
+    <div class="card">
+      <p class="card-title">Camera Stream</p>
+      <div style="position: relative;">
+        <img id="camera-feed" src="">
+        <canvas id="overlay" width="480" height="480"></canvas>
+      </div>
+    </div>
+  </div>
+</body>
+<script>
+  function updateImage() {
+    fetch('/camera')
+        .then(response => {
+            const sunData = JSON.parse(response.headers.get('sun-coords'));
+            
+            return response.blob().then(blob => {
+                const img = document.getElementById('camera-feed');
+                img.src = URL.createObjectURL(blob);
+                
+                console.log('Sun positions:', sunData);
+                drawSunPositions(sunData);
+            });
+        })
+        .catch(error => console.error('Error:', error));
+  }
+  function drawSunPositions(sunData) {
+    const canvas = document.getElementById('overlay');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    console.log("canvas.width", canvas.width, "canvas.height", canvas.height);
+    ctx.fillStyle = 'red';
+    sunData.coords.forEach(coord => {
+        ctx.beginPath();
+        ctx.arc(coord.x * 5 , coord.y * 5, 3, 0, 2 * Math.PI);
+        ctx.fill();
+    });
+    ctx.fillStyle = 'purple';
+    ctx.beginPath();
+    ctx.arc(sunData.center.x * 5, sunData.center.y * 5, 5, 0, 2 * Math.PI);
+    ctx.fill();
+  }
+  setInterval(updateImage, 2000);
+</script>
+</html>
