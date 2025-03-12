@@ -18,6 +18,7 @@ typedef struct {
  */
 typedef struct {
     pixel_coordinate_t *coords;
+
     uint16_t count;
     uint16_t capacity;
     pixel_coordinate_t center_coord;
@@ -30,5 +31,8 @@ typedef struct {
  * @return max_brightness_pixels_t* which then need to free
  */
 max_brightness_pixels_t *mark_sun(camera_fb_t *frame);
+
+esp_err_t get_FOVs(pixel_coordinate_t *sun_coord, int8_t *fovs2write);
+
 
 #endif

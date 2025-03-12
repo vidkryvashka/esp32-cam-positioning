@@ -1,24 +1,23 @@
 #include <stdlib.h>
-#include <string.h> //Requires by memset
+#include <esp_http_server.h>
+// #include <string.h> //Requires by memset
 // #include "freertos/FreeRTOS.h"
 // #include "freertos/task.h"
 // #include "spi_flash_mmap.h" // #include "esp_spi_flash.h" // #include "esp_system.h" replacement chain, deprecated
-#include <esp_http_server.h>
 
 // #include "esp_wifi.h"
 // #include "esp_event.h"
 // #include "freertos/event_groups.h"
+// #include "cJSON.h"
+// #include <lwip/sockets.h>
+// #include <lwip/api.h>
+// #include <lwip/netdb.h>
+// #include <lwip/sys.h>
 #include "esp_log.h"
 #include "nvs_flash.h"
 #include "esp_netif.h"
 #include "driver/gpio.h"
-#include "cJSON.h"
-// #include "base64.h"
 #include <stddef.h>
-#include <lwip/sockets.h>
-#include <lwip/sys.h>
-#include <lwip/api.h>
-#include <lwip/netdb.h>
 
 #include "defs.h"
 
@@ -36,7 +35,6 @@ static esp_err_t send_web_page(httpd_req_t *req) {
     return httpd_resp_send(req, (const char *)frontend_index_html, frontend_index_html_len);
 }
 
-
 static esp_err_t get_req_handler(httpd_req_t *req) {
     return send_web_page(req);
 }
@@ -48,8 +46,6 @@ static esp_err_t form_json(char *metadata, uint16_t metadata_size, max_brightnes
                     sun_positions->count,
                     sun_positions->center_coord.x,
                     sun_positions->center_coord.y);
-
-    // Додаємо координати
     char coord_buf[32];
     for (uint8_t i = 0; i < sun_positions->count; i++) {
         snprintf(coord_buf, sizeof(coord_buf), 
@@ -69,6 +65,7 @@ static esp_err_t jpg_handler(httpd_req_t *req) {
 
     camera_fb_t *frame = esp_camera_fb_get();
     if (!frame) {
+        ESP_LOGE(TAG, "could't take frame");
         httpd_resp_send_500(req);
         return ESP_FAIL;
     }
@@ -80,12 +77,10 @@ static esp_err_t jpg_handler(httpd_req_t *req) {
         uint8_t *jpg_buf = NULL;
         size_t jpg_buf_len = 0;
         if (frame2jpg(frame, 80, &jpg_buf, &jpg_buf_len)) {
-            // Конвертуємо дані в JSON
             const uint16_t metadata_size = 512;
             char metadata[metadata_size];
             form_json(metadata, metadata_size, sun_positions);
 
-            // Встановлюємо заголовки
             httpd_resp_set_type(req, "image/jpeg");
             httpd_resp_set_hdr(req, "sun-coords", metadata);
             

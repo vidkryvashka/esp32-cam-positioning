@@ -26,6 +26,9 @@
 
 #if ESP_CAMERA_SUPPORTED
 
+#define FRAME_WIDTH_AND_HEIGHT 96   // in camera.c static camera_config_t camera_config .frame_size = FRAMESIZE_96X96
+#define PIXELS_FOCUS 109    // calculated with camera FOW 56 width & height degrees for аurther calculations
+
 esp_err_t init_camera(void);
 
 #endif

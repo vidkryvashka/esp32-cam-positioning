@@ -7,22 +7,25 @@
 #define TAG "esp_main"
 #endif
 
-// // to replace server for cli only testing
-// void photographer() {
-//     while(1) {
-//         camera_fb_t *frame = esp_camera_fb_get();
-//         mark_sun(frame);
 
-//         esp_camera_fb_return(frame);
-//         vTaskDelay(pdMS_TO_TICKS(1000));
-//     }
-// }
+// works bad
+void photographer() {
+    int8_t FOVs[2] = {0, 0};
+    while(1) {
+        camera_fb_t *frame = esp_camera_fb_get();
+        max_brightness_pixels_t *mbp = mark_sun(frame);
+        get_FOVs(&mbp->center_coord, FOVs);
+
+        esp_camera_fb_return(frame);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
 
 void app_main(void)
 {
     init_esp_things();
 
     init_camera();
-    // photographer();
-    server_up();
+    photographer();
+    // server_up();
 }

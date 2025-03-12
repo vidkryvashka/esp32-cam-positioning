@@ -84,6 +84,10 @@ esp_err_t init_camera(void)
     return ESP_OK;
 }
 
+
+
+
+
 esp_err_t print_pixel_value(camera_fb_t *frame, uint8_t x, uint8_t y) {
     if (frame->format != PIXFORMAT_RGB565) {
         perror("get_pixel_value wrong PIXFORMAT");
