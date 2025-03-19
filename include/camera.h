@@ -27,9 +27,16 @@
 #if ESP_CAMERA_SUPPORTED
 
 #define FRAME_WIDTH_AND_HEIGHT 96   // in camera.c static camera_config_t camera_config .frame_size = FRAMESIZE_96X96
-#define PIXELS_FOCUS 109    // calculated with camera FOW 56 width & height degrees for аurther calculations
+/**
+ * @brief distance from camera to focus in pixels related to frame size and camera FOV (56 degrees)
+ * should be calculated in esp_err_t init_camera(void);
+ */
+extern uint16_t pixels_focus;
 
 esp_err_t init_camera(void);
+
+// camera_fb_t *frame = esp_camera_fb_get();    // take photo
+// esp_camera_fb_return(frame); // clear photo
 
 #endif
 

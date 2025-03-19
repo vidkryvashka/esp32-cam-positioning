@@ -6,7 +6,6 @@
 
 
 #define STD_BRIGHTEST_PIXELS_COUNT 16
-static uint16_t pixels_divider = 1;
 
 
 #define ROUNDF2U8(X) ( (X >= 0.0f) ? (uint8_t)(X + 0.5f) : 0 )
@@ -25,6 +24,7 @@ static esp_err_t calc_brightest_center(max_brightness_pixels_t *mbp) {
 
 static esp_err_t ballance_max_pixels_count(max_brightness_pixels_t *mbp) {
     esp_err_t err = ESP_FAIL;
+    uint16_t pixels_divider = 1;
     if (mbp->count > STD_BRIGHTEST_PIXELS_COUNT) {
         pixels_divider = mbp->count / STD_BRIGHTEST_PIXELS_COUNT + 1;
         uint16_t new_count = 0;
@@ -110,8 +110,8 @@ static max_brightness_pixels_t *find_max_brightness_pixels(camera_fb_t *frame) {
 
     ballance_max_pixels_count(mbp);
     
-    ESP_LOGI(TAG, "Found %zu / %zu max pixels with max r: %hu g: %hu b: %hu, brightness: %zu", 
-                mbp->count, orig_mbp_count, max_r, max_g, max_b, max_brightness);
+    ESP_LOGI(TAG, "Found %zu / %zu max pixels with max r: %hu g: %hu b: %hu", 
+                mbp->count, orig_mbp_count, max_r, max_g, max_b);
 
     calc_brightest_center(mbp);
 
@@ -119,18 +119,27 @@ static max_brightness_pixels_t *find_max_brightness_pixels(camera_fb_t *frame) {
 }
 
 
-max_brightness_pixels_t *mark_sun(camera_fb_t *frame) {
-    max_brightness_pixels_t *pixels = find_max_brightness_pixels(frame);
-    return pixels;
+esp_err_t get_FOVs(pixel_coordinate_t *sun_coord, float *fovs2write /* with size 2 */) {
+    if (sun_coord->x >= FRAME_WIDTH_AND_HEIGHT || sun_coord->y >= FRAME_WIDTH_AND_HEIGHT) {
+        ESP_LOGE(TAG, "get_FOVs got strange sun_coord");
+        return ESP_FAIL;
+    }
+
+    int8_t diff_x =  FRAME_WIDTH_AND_HEIGHT/2 - sun_coord->x;
+    int8_t diff_y =  FRAME_WIDTH_AND_HEIGHT/2 - sun_coord->y;
+
+    fovs2write[0] = atanf((float)diff_x / (float)pixels_focus) * (float)90 / M_PI_2;
+    fovs2write[1] = atanf((float)diff_y / (float)pixels_focus) * (float)90 / M_PI_2;
+
+    ESP_LOGI(TAG, "FOVs x: %.2f y: %.2f", fovs2write[0], fovs2write[1]);
+
+    return ESP_OK;
 }
 
-esp_err_t get_FOVs(pixel_coordinate_t *sun_coord, int8_t *fovs2write) {
-    uint8_t diff_x =  FRAME_WIDTH_AND_HEIGHT/2 - sun_coord->x;
-    uint8_t diff_y =  FRAME_WIDTH_AND_HEIGHT/2 - sun_coord->y;
 
-    fovs2write[0] = asinf((float)diff_x / (float)PIXELS_FOCUS) * (float)90 / M_PI_2;
-    fovs2write[1] = asinf((float)diff_y / (float)PIXELS_FOCUS) * (float)90 / M_PI_2;
-
-    ESP_LOGI(TAG, "FOWs x: %hu y: %hu\n", fovs2write[0], fovs2write[1]);
-    return ESP_OK;
+max_brightness_pixels_t *mark_sun(camera_fb_t *frame) {
+    max_brightness_pixels_t *mbp = find_max_brightness_pixels(frame);
+    float FOVs[2] = {0, 0};
+    get_FOVs(&mbp->center_coord, FOVs);
+    return mbp;
 }

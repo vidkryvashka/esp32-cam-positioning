@@ -28,11 +28,18 @@ typedef struct {
  * @brief makes as called
  * 
  * @param frame takes camera_fb_t*
- * @return max_brightness_pixels_t* which then need to free
+ * @return max_brightness_pixels_t* which then needs to be freed
  */
 max_brightness_pixels_t *mark_sun(camera_fb_t *frame);
 
-esp_err_t get_FOVs(pixel_coordinate_t *sun_coord, int8_t *fovs2write);
+/**
+ * @brief calculates X Y degrees from point to center of frame
+ * 
+ * @param sun_coord input point
+ * @param fovs2write output int8_t array must be size 2
+ * @return errors
+ */
+esp_err_t get_FOVs(pixel_coordinate_t *sun_coord, float *fovs2write /* with size 2 */);
 
 
 #endif
