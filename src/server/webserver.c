@@ -33,22 +33,24 @@
 #endif
 
 
-static esp_err_t send_web_page(httpd_req_t *req)
-{
+static esp_err_t send_web_page(
+    httpd_req_t *req
+) {
     return httpd_resp_send(req, (const char *)frontend_index_html, frontend_index_html_len);
 }
 
 
-static esp_err_t get_req_handler(httpd_req_t *req)
-{
+static esp_err_t get_req_handler(
+    httpd_req_t *req
+) {
     return send_web_page(req);
 }
 
 
 static esp_err_t form_json(
     char *metadata,
-    uint16_t metadata_size,
-    max_brightness_pixels_t *sun_positions
+    const uint16_t metadata_size,
+    const max_brightness_pixels_t *sun_positions
 ) {
     snprintf(metadata, metadata_size, 
                     "{\"count\":%zu,\"center\":{\"x\":%zu,\"y\":%zu},\"coords\":[", 
@@ -152,7 +154,7 @@ esp_err_t server_up(void)
     esp_err_t err = ESP_FAIL;
     
     ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
-   esp_err_t wifi_err = connect_wifi();
+    esp_err_t wifi_err = connect_wifi();
 //    set_mdns();
 //
 //    if (!wifi_err) {

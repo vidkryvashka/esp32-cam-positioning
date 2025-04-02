@@ -56,7 +56,7 @@ static esp_err_t ballance_max_pixels_count(
 
 
 static max_brightness_pixels_t *find_max_brightness_pixels(
-    camera_fb_t *frame
+    const camera_fb_t *frame
 ) {
     uint16_t *pixel_data = (uint16_t *)frame->buf;
     uint8_t max_brightness = 0;
@@ -127,7 +127,7 @@ static max_brightness_pixels_t *find_max_brightness_pixels(
 
 
 esp_err_t get_FOVs(
-    pixel_coordinate_t *sun_coord,
+    const pixel_coordinate_t *sun_coord,
     float *FOVs /* with size 2 */
 ) {
     if (sun_coord->x >= FRAME_WIDTH_AND_HEIGHT || sun_coord->y >= FRAME_WIDTH_AND_HEIGHT) {
@@ -135,8 +135,8 @@ esp_err_t get_FOVs(
         return ESP_FAIL;
     }
 
-    int8_t diff_x =  FRAME_WIDTH_AND_HEIGHT/2 - sun_coord->x;
-    int8_t diff_y =  FRAME_WIDTH_AND_HEIGHT/2 - sun_coord->y;
+    int8_t diff_x = FRAME_WIDTH_AND_HEIGHT/2 - sun_coord->x;
+    int8_t diff_y = FRAME_WIDTH_AND_HEIGHT/2 - sun_coord->y;
 
     FOVs[0] = atanf((float)diff_x / (float)pixels_focus) * (float)90 / M_PI_2;
     FOVs[1] = atanf((float)diff_y / (float)pixels_focus) * (float)90 / M_PI_2;

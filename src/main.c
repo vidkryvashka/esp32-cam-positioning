@@ -11,7 +11,7 @@
 // works bad
 void photographer()
 {
-    int8_t FOVs[2] = {0, 0};
+    float FOVs[2] = {0, 0};
     while(1) {
         camera_fb_t *frame = esp_camera_fb_get();
         max_brightness_pixels_t *mbp = mark_sun(frame);
