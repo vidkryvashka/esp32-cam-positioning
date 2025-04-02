@@ -22,6 +22,7 @@
 #include "defs.h"
 
 #include "server/wifi.h"
+#include "server/setting_mdns.h"
 #include "server/webserver.h"
 #include "server/index_html.h"
 #include "camera.h"
@@ -31,16 +32,26 @@
 #define TAG "esp_webserver"
 #endif
 
-static esp_err_t send_web_page(httpd_req_t *req) {
+
+static esp_err_t send_web_page(
+    httpd_req_t *req
+) {
     return httpd_resp_send(req, (const char *)frontend_index_html, frontend_index_html_len);
 }
 
-static esp_err_t get_req_handler(httpd_req_t *req) {
+
+static esp_err_t get_req_handler(
+    httpd_req_t *req
+) {
     return send_web_page(req);
 }
 
 
-static esp_err_t form_json(char *metadata, uint16_t metadata_size, max_brightness_pixels_t *sun_positions) {
+static esp_err_t form_json(
+    char *metadata,
+    const uint16_t metadata_size,
+    const max_brightness_pixels_t *sun_positions
+) {
     snprintf(metadata, metadata_size, 
                     "{\"count\":%zu,\"center\":{\"x\":%zu,\"y\":%zu},\"coords\":[", 
                     sun_positions->count,
@@ -60,7 +71,9 @@ static esp_err_t form_json(char *metadata, uint16_t metadata_size, max_brightnes
 }
 
 
-static esp_err_t jpg_handler(httpd_req_t *req) {
+static esp_err_t jpg_handler(
+    httpd_req_t *req
+) {
     ESP_LOGI(TAG, "got jpg uri req");
 
     camera_fb_t *frame = esp_camera_fb_get();
@@ -121,7 +134,8 @@ static httpd_uri_t uri_camera = {
 };
 
 
-static httpd_handle_t setup_server(void) {
+static httpd_handle_t setup_server(void)
+{
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     httpd_handle_t server = NULL;
 
@@ -135,12 +149,14 @@ static httpd_handle_t setup_server(void) {
 }
 
 
-esp_err_t server_up(void) {
+esp_err_t server_up(void)
+{
     esp_err_t err = ESP_FAIL;
     
     ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
     esp_err_t wifi_err = connect_wifi();
-
+    set_mdns();
+    
     if (!wifi_err) {
         setup_server();
         ESP_LOGI(TAG, "\n Server must be up, good boy \n");

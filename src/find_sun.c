@@ -10,7 +10,10 @@
 
 #define ROUNDF2U8(X) ( (X >= 0.0f) ? (uint8_t)(X + 0.5f) : 0 )
 
-static esp_err_t calc_brightest_center(max_brightness_pixels_t *mbp) {
+
+static esp_err_t calc_brightest_center(
+    max_brightness_pixels_t *mbp
+) {
     float avg_x = 0, avg_y = 0;
     for (int i = 0; i < mbp->count; ++i) {
         avg_x += ROUNDF2U8((float)mbp->coords[i].x / (float)mbp->count);
@@ -22,7 +25,9 @@ static esp_err_t calc_brightest_center(max_brightness_pixels_t *mbp) {
 }
 
 
-static esp_err_t ballance_max_pixels_count(max_brightness_pixels_t *mbp) {
+static esp_err_t ballance_max_pixels_count(
+    max_brightness_pixels_t *mbp
+) {
     esp_err_t err = ESP_FAIL;
     uint16_t pixels_divider = 1;
     if (mbp->count > STD_BRIGHTEST_PIXELS_COUNT) {
@@ -50,7 +55,9 @@ static esp_err_t ballance_max_pixels_count(max_brightness_pixels_t *mbp) {
 }
 
 
-static max_brightness_pixels_t *find_max_brightness_pixels(camera_fb_t *frame) {
+static max_brightness_pixels_t *find_max_brightness_pixels(
+    const camera_fb_t *frame
+) {
     uint16_t *pixel_data = (uint16_t *)frame->buf;
     uint8_t max_brightness = 0;
     
@@ -119,19 +126,22 @@ static max_brightness_pixels_t *find_max_brightness_pixels(camera_fb_t *frame) {
 }
 
 
-esp_err_t get_FOVs(pixel_coordinate_t *sun_coord, float *fovs2write /* with size 2 */) {
+esp_err_t get_FOVs(
+    const pixel_coordinate_t *sun_coord,
+    float *FOVs /* with size 2 */
+) {
     if (sun_coord->x >= FRAME_WIDTH_AND_HEIGHT || sun_coord->y >= FRAME_WIDTH_AND_HEIGHT) {
         ESP_LOGE(TAG, "get_FOVs got strange sun_coord");
         return ESP_FAIL;
     }
 
-    int8_t diff_x =  FRAME_WIDTH_AND_HEIGHT/2 - sun_coord->x;
-    int8_t diff_y =  FRAME_WIDTH_AND_HEIGHT/2 - sun_coord->y;
+    int8_t diff_x = FRAME_WIDTH_AND_HEIGHT/2 - sun_coord->x;
+    int8_t diff_y = FRAME_WIDTH_AND_HEIGHT/2 - sun_coord->y;
 
-    fovs2write[0] = atanf((float)diff_x / (float)pixels_focus) * (float)90 / M_PI_2;
-    fovs2write[1] = atanf((float)diff_y / (float)pixels_focus) * (float)90 / M_PI_2;
+    FOVs[0] = atanf((float)diff_x / (float)pixels_focus) * (float)90 / M_PI_2;
+    FOVs[1] = atanf((float)diff_y / (float)pixels_focus) * (float)90 / M_PI_2;
 
-    ESP_LOGI(TAG, "FOVs x: %.2f y: %.2f", fovs2write[0], fovs2write[1]);
+    ESP_LOGI(TAG, "FOVs x: %.2f y: %.2f", FOVs[0], FOVs[1]);
 
     return ESP_OK;
 }

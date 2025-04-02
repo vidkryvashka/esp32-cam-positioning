@@ -20,6 +20,7 @@
 #define LED_PIN 33
 #define BLINK_PERIOD pdMS_TO_TICKS(150)
 
+
 static esp_err_t init_gpio(void)
 {
     esp_err_t err = ESP_FAIL;

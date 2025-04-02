@@ -1,5 +1,5 @@
-#ifndef FIND_SUN
-#define FIND_SUN
+#ifndef FIND_SUN_H
+#define FIND_SUN_H
 
 
 #include "defs.h"
@@ -39,7 +39,10 @@ max_brightness_pixels_t *mark_sun(camera_fb_t *frame);
  * @param fovs2write output int8_t array must be size 2
  * @return errors
  */
-esp_err_t get_FOVs(pixel_coordinate_t *sun_coord, float *fovs2write /* with size 2 */);
+esp_err_t get_FOVs(
+    const pixel_coordinate_t *sun_coord,
+    float *FOVs /* with size 2 */
+);
 
 
 #endif

@@ -1,5 +1,4 @@
 #include "server/wifi.h"
-#include "server/setting_mdns.h"
 
 #ifndef TAG
 #define TAG "esp_wifi"
@@ -8,16 +7,19 @@
 /* FreeRTOS event group to signal when we are connected */
 static EventGroupHandle_t s_wifi_event_group;
 
-static int s_retry_num = 0;
+static uint8_t s_retry_num = 0;
 
-static void event_handler(void *arg, esp_event_base_t event_base,
-                          int32_t event_id, void *event_data)
-{
-    // ESP_LOGI(TAG, "Івент затронуто: base=%s, id=%ld", event_base, event_id);
+
+// esp_event_handler_t
+static void event_handler(
+    void *arg,
+    esp_event_base_t event_base,
+    int32_t event_id,
+    void *event_data
+) {
+    // esp_base is (char *) 🤯 can't switch case
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
-    {
         esp_wifi_connect();
-    }
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
     {
         if (s_retry_num < CONFIG_ESP_MAXIMUM_RETRY)
@@ -27,9 +29,7 @@ static void event_handler(void *arg, esp_event_base_t event_base,
             ESP_LOGI(TAG, "retry to connect to the AP ");
         }
         else
-        {
             xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
-        }
         ESP_LOGI(TAG, "connect to the AP fail ");
     }
     else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
@@ -41,63 +41,37 @@ static void event_handler(void *arg, esp_event_base_t event_base,
 }
 
 
-static void form_wifi_points(wifi_sta_config_t *wifi_points)
-{
-    wifi_sta_config_t wifi_point_0 = {
-        .ssid = CONFIG_ESP_WIFI_SSID_0,
-        .password = CONFIG_ESP_WIFI_PASSWORD_0,
-        .threshold.authmode = WIFI_AUTH_WPA2_PSK,
+static void form_wifi_points(
+    wifi_sta_config_t *wifi_points
+) {
+    const wifi_sta_config_t wifi_points_temp[CONFIG_ESP_WIFI_MAX_POINTS_NUMBER] = {
+        {CONFIG_ESP_WIFI_SSID_0, CONFIG_ESP_WIFI_PASSWORD_0, .threshold.authmode = WIFI_AUTH_WPA2_PSK},
+        {CONFIG_ESP_WIFI_SSID_1, CONFIG_ESP_WIFI_PASSWORD_1, .threshold.authmode = WIFI_AUTH_WPA2_PSK},
+        {CONFIG_ESP_WIFI_SSID_2, CONFIG_ESP_WIFI_PASSWORD_2, .threshold.authmode = WIFI_AUTH_WPA2_PSK},
+        {CONFIG_ESP_WIFI_SSID_3, CONFIG_ESP_WIFI_PASSWORD_3, .threshold.authmode = WIFI_AUTH_WPA2_PSK},
+        {CONFIG_ESP_WIFI_SSID_4, CONFIG_ESP_WIFI_PASSWORD_4, .threshold.authmode = WIFI_AUTH_WPA2_PSK},
     };
-
-    wifi_sta_config_t wifi_point_1 = {
-        .ssid = CONFIG_ESP_WIFI_SSID_1,
-        .password = CONFIG_ESP_WIFI_PASSWORD_1,
-        .threshold.authmode = WIFI_AUTH_WPA2_PSK,
-    };
-
-    wifi_sta_config_t wifi_point_2 = {
-        .ssid = CONFIG_ESP_WIFI_SSID_2,
-        .password = CONFIG_ESP_WIFI_PASSWORD_2,
-        .threshold.authmode = WIFI_AUTH_WPA2_PSK,
-    };
-
-    wifi_sta_config_t wifi_point_3 = {
-        .ssid = CONFIG_ESP_WIFI_SSID_3,
-        .password = CONFIG_ESP_WIFI_PASSWORD_3,
-        .threshold.authmode = WIFI_AUTH_WPA2_PSK,
-    };
-
-    wifi_sta_config_t wifi_point_4 = {
-        .ssid = CONFIG_ESP_WIFI_SSID_4,
-        .password = CONFIG_ESP_WIFI_PASSWORD_4,
-        .threshold.authmode = WIFI_AUTH_WPA2_PSK,
-    };
-
-    wifi_points[0] = wifi_point_0;
-    wifi_points[1] = wifi_point_1;
-    wifi_points[2] = wifi_point_2;
-    wifi_points[3] = wifi_point_3;
-    wifi_points[4] = wifi_point_4;
+    
+    memcpy(wifi_points, wifi_points_temp, sizeof(wifi_points_temp));
 }
 
 
-static esp_err_t find_wifi() {
+static esp_err_t find_wifi(void)
+{
     esp_err_t err = ESP_FAIL;
     wifi_sta_config_t wifi_points[CONFIG_ESP_WIFI_MAX_POINTS_NUMBER];
     form_wifi_points(wifi_points);
 
     for (
-        int index = 0, connected = 0;
-        // !connected && index < CONFIG_ESP_WIFI_POINTS_NUMBER;
+        uint8_t index = 0, connected = 0;
         !connected;
         ++ index
     ) {
-    
         if (index > CONFIG_ESP_WIFI_POINTS_NUMBER)
             index = 0;
         
         wifi_config_t wifi_config = {
-            .sta = wifi_points[index],
+            .sta = wifi_points[index]
         };
         ESP_LOGI(TAG, "Trying to connect to SSID: %s, Password: %s (index: %d)",
                  wifi_points[index].ssid, wifi_points[index].password, index);
@@ -121,17 +95,16 @@ static esp_err_t find_wifi() {
         else if (bits & WIFI_FAIL_BIT) {
             ESP_LOGW(TAG, "Failed to connect to SSID: %s", wifi_points[index].ssid);
             led_blink(1, 2);
-        } else {
+        } else
             ESP_LOGE(TAG, "Unexpected event during Wi-Fi connection.");
-        }
 
-        if (!connected) {
+        if (!connected)
             ESP_ERROR_CHECK(esp_wifi_stop());
-        }
     }
 
     return err;
 }
+
 
 esp_err_t connect_wifi(void)
 {
@@ -168,7 +141,6 @@ esp_err_t connect_wifi(void)
     if (err) {
         ESP_LOGE(TAG, "All Wi-Fi connection attempts failed.");
     }
-    set_mdns();
 
     vEventGroupDelete(s_wifi_event_group);
     return err;

@@ -1,3 +1,6 @@
+#ifndef WIFI_H
+#define WIFI_H
+
 #include "defs.h"
 #include "esp_wifi.h"
 #include "esp_event.h"
@@ -12,7 +15,6 @@
 
 /**
  * @brief connects to first avialable wifi point configured in sdkconfig or menuconfig
- * 
  * @return esp_err_t
  * 
  *          - ESP_OK if connected
@@ -20,3 +22,5 @@
  *          - ESP_ERR if not connected to any configured points
  */
 esp_err_t connect_wifi(void);
+
+#endif
