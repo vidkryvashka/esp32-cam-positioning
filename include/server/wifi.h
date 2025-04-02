@@ -1,3 +1,6 @@
+#ifndef WIFI_H
+#define WIFI_H
+
 #include "defs.h"
 #include "esp_wifi.h"
 #include "esp_event.h"
@@ -20,3 +23,5 @@
  *          - ESP_ERR if not connected to any configured points
  */
 esp_err_t connect_wifi(void);
+
+#endif

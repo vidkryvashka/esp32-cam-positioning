@@ -1,5 +1,4 @@
 #include "server/wifi.h"
-#include "server/setting_mdns.h"
 
 #ifndef TAG
 #define TAG "esp_wifi"
@@ -10,9 +9,13 @@ static EventGroupHandle_t s_wifi_event_group;
 
 static int s_retry_num = 0;
 
-static void event_handler(void *arg, esp_event_base_t event_base,
-                          int32_t event_id, void *event_data)
-{
+
+static void event_handler(
+    void *arg,
+    esp_event_base_t event_base,
+    int32_t event_id,
+    void *event_data
+) {
     // ESP_LOGI(TAG, "Івент затронуто: base=%s, id=%ld", event_base, event_id);
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
     {
@@ -41,8 +44,9 @@ static void event_handler(void *arg, esp_event_base_t event_base,
 }
 
 
-static void form_wifi_points(wifi_sta_config_t *wifi_points)
-{
+static void form_wifi_points(
+    wifi_sta_config_t *wifi_points
+) {
     wifi_sta_config_t wifi_point_0 = {
         .ssid = CONFIG_ESP_WIFI_SSID_0,
         .password = CONFIG_ESP_WIFI_PASSWORD_0,
@@ -81,7 +85,8 @@ static void form_wifi_points(wifi_sta_config_t *wifi_points)
 }
 
 
-static esp_err_t find_wifi() {
+static esp_err_t find_wifi(void)
+{
     esp_err_t err = ESP_FAIL;
     wifi_sta_config_t wifi_points[CONFIG_ESP_WIFI_MAX_POINTS_NUMBER];
     form_wifi_points(wifi_points);
@@ -133,6 +138,7 @@ static esp_err_t find_wifi() {
     return err;
 }
 
+
 esp_err_t connect_wifi(void)
 {
     esp_err_t err = ESP_FAIL;
@@ -168,7 +174,6 @@ esp_err_t connect_wifi(void)
     if (err) {
         ESP_LOGE(TAG, "All Wi-Fi connection attempts failed.");
     }
-    set_mdns();
 
     vEventGroupDelete(s_wifi_event_group);
     return err;

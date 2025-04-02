@@ -9,7 +9,8 @@
 
 
 // works bad
-void photographer() {
+void photographer()
+{
     int8_t FOVs[2] = {0, 0};
     while(1) {
         camera_fb_t *frame = esp_camera_fb_get();
@@ -21,11 +22,12 @@ void photographer() {
     }
 }
 
+
 void app_main(void)
 {
     init_esp_things();
 
     init_camera();
-    photographer();
-    // server_up();
+    // photographer();
+    server_up();
 }

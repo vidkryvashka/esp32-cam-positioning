@@ -255,13 +255,13 @@ endmenu # Camera configuration
 menu "WiFi Configuration"
 
     config ESP_WIFI_MAX_POINTS_NUMBER
-        int "Points number"
+        int "Max points number"
         default 5
         help
             Number of WiFi points SSIDs passwords
 
     config ESP_WIFI_POINTS_NUMBER
-        int "Points number"
+        int "Available points number"
         default 5
         help
             Number of WiFi points SSIDs passwords
