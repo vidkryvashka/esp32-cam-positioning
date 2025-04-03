@@ -11,7 +11,6 @@ static uint8_t s_retry_num = 0;
 
 
 // esp_event_handler_t
-// esp_event_handler_t
 static void event_handler(
     void *arg,
     esp_event_base_t event_base,
