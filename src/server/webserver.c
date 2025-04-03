@@ -155,17 +155,17 @@ esp_err_t server_up(void)
     
     ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
     esp_err_t wifi_err = connect_wifi();
-//    set_mdns();
-//
-//    if (!wifi_err) {
-//        setup_server();
-//        ESP_LOGI(TAG, "\n Server must be up, good boy \n");
-//        err = ESP_OK;
-//        led_blink(0.3, 10);
-//    } else {
-//        ESP_LOGE(TAG, "\n Server not started \n");
-//        led_blink(3, 3);
-//    }
+    set_mdns();
+    
+    if (!wifi_err) {
+        setup_server();
+        ESP_LOGI(TAG, "\n Server must be up, good boy \n");
+        err = ESP_OK;
+        led_blink(0.3, 10);
+    } else {
+        ESP_LOGE(TAG, "\n Server not started \n");
+        led_blink(3, 3);
+    }
     
     return err;
 }

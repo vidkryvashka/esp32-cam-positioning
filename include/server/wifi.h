@@ -15,7 +15,6 @@
 
 /**
  * @brief connects to first avialable wifi point configured in sdkconfig or menuconfig
- * 
  * @return esp_err_t
  * 
  *          - ESP_OK if connected
