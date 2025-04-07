@@ -268,61 +268,61 @@ menu "WiFi Configuration"
 
     config ESP_WIFI_SSID_0
         string "WiFi SSID"
-        default "myssid"
+        default "ssid"
         help
             SSID (network name) for the example to connect to.
 
-    config ESP_WIFI_PASSWORD_0
+    config ESP_WIFI_PASSWD_0
         string "WiFi Password"
-        default "mypassword"
+        default "password"
         help
             WiFi password (WPA or WPA2) for the example to use.
     
     config ESP_WIFI_SSID_1
         string "WiFi SSID"
-        default "myssid"
+        default "ssid"
         help
             SSID (network name) for the example to connect to.
 
-    config ESP_WIFI_PASSWORD_1
+    config ESP_WIFI_PASSWD_1
         string "WiFi Password"
-        default "mypassword"
+        default "password"
         help
             WiFi password (WPA or WPA2) for the example to use.
 
     config ESP_WIFI_SSID_2
         string "WiFi SSID"
-        default "myssid"
+        default "ssid"
         help
             SSID (network name) for the example to connect to.
 
-    config ESP_WIFI_PASSWORD_2
+    config ESP_WIFI_PASSWD_2
         string "WiFi Password"
-        default "mypassword"
+        default "password"
         help
             WiFi password (WPA or WPA2) for the example to use.
     
     config ESP_WIFI_SSID_3
         string "WiFi SSID"
-        default "myssid"
+        default "ssid"
         help
             SSID (network name) for the example to connect to.
 
-    config ESP_WIFI_PASSWORD_3
+    config ESP_WIFI_PASSWD_3
         string "WiFi Password"
-        default "mypassword"
+        default "password"
         help
             WiFi password (WPA or WPA2) for the example to use.
 
     config ESP_WIFI_SSID_4
         string "WiFi SSID"
-        default "myssid"
+        default "ssid"
         help
             SSID (network name) for the example to connect to.
 
-    config ESP_WIFI_PASSWORD_4
+    config ESP_WIFI_PASSWD_4
         string "WiFi Password"
-        default "mypassword"
+        default "password"
         help
             WiFi password (WPA or WPA2) for the example to use.
 
@@ -331,6 +331,37 @@ menu "WiFi Configuration"
         default 5
         help
             Set the Maximum retry to avoid station reconnecting to the AP unlimited when the AP is really inexistent.
+    
+
+    config ESP_WIFI_SOFTAP_ENABLE
+        bool "enable WiFi SoftAP"
+        default n
+        help
+            Enable WiFi SoftAP station.
+
+
+    config ESP_WIFI_SOFTAP_SSID
+        depends on ESP_WIFI_SOFTAP_ENABLE
+        string "SoftAP SSID"
+        default "esp32cam WiFi"
+        help
+                SoftAP SSID (board WiFi name) to connect to.
+
+    config ESP_WIFI_SOFTAP_PASSWD
+        depends on ESP_WIFI_SOFTAP_ENABLE
+        string "SoftAP password"
+        default "japerdole"
+        help
+            SoftAP WiFi password to board WiFi.
+    
+    config ESP_WIFI_SOFTAP_MAX_CLIENTS
+        depends on ESP_WIFI_SOFTAP_ENABLE
+        int "Max clients"
+        default 4
+        help
+            Max connected wifi clients
+
+
 
 endmenu # WiFi Configuration
 

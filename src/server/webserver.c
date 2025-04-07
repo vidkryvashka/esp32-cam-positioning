@@ -154,9 +154,9 @@ esp_err_t server_up(void)
     esp_err_t err = ESP_FAIL;
     
     ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
-    esp_err_t wifi_err = connect_wifi();
+    esp_err_t wifi_err = local_start_wifi();
     set_mdns();
-    
+
     if (!wifi_err) {
         setup_server();
         ESP_LOGI(TAG, "\n Server must be up, good boy \n");

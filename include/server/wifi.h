@@ -21,6 +21,6 @@
  * 
  *          - ESP_ERR if not connected to any configured points
  */
-esp_err_t connect_wifi(void);
+esp_err_t local_start_wifi(void);
 
 #endif
