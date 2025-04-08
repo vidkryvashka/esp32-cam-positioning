@@ -5,6 +5,11 @@
 #endif
 
 
+#if !CONFIG_ESP_WIFI_SOFTAP_ENABLE
+static uint8_t s_retry_num = 0;
+static EventGroupHandle_t s_wifi_event_group;   // FreeRTOS event group to signal when we are connected
+#endif
+
 static void event_handler(
     void *arg,
     esp_event_base_t event_base,
@@ -18,8 +23,6 @@ static void event_handler(
         ESP_LOGI(TAG, "Device disconnected from ESP32 SoftAP");
     }
 #else
-    static uint8_t s_retry_num = 0;
-    static EventGroupHandle_t s_wifi_event_group;   // FreeRTOS event group to signal when we are connected
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)   // esp_base is (char *) 🤯 can't switch case
         esp_wifi_connect();
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
@@ -157,6 +160,15 @@ static esp_err_t connect_wifi(void)
 
 #else
 
+
+/**
+ * @brief creates own wifi pioint to which connects client (laptop / phone)
+ * @return
+ * 
+ *          - ESP_OK if everything good
+ * 
+ *          - ESP_ERR if anything failed
+ */
 static esp_err_t init_softap(void)
 {
     esp_err_t err_sum = ESP_OK;
@@ -178,7 +190,7 @@ static esp_err_t init_softap(void)
             .ssid = CONFIG_ESP_WIFI_SOFTAP_SSID,
             .ssid_len = strlen(CONFIG_ESP_WIFI_SOFTAP_SSID),
             .password = CONFIG_ESP_WIFI_SOFTAP_PASSWD,
-            .channel = 11,  // EXAMPLE_ESP_WIFI_CHANNEL,
+            .channel = 11, // without this line doesn't even ping  // EXAMPLE_ESP_WIFI_CHANNEL,
             .max_connection = CONFIG_ESP_WIFI_SOFTAP_MAX_CLIENTS,
             .authmode = WIFI_AUTH_WPA2_PSK,
             .pmf_cfg = {
@@ -207,13 +219,15 @@ esp_err_t local_start_wifi(void)
     esp_err_t err;
 
 #if CONFIG_ESP_WIFI_SOFTAP_ENABLE
-    #if !CONFIG_ESP_WIFI_SOFTAP_SAE_SUPPORT
+    #if !CONFIG_ESP_WIFI_SOFTAP_SUPPORT
         #error "enabled unsupported wifi softAP"
     #endif
+    ESP_LOGI(TAG, "Starting SoftAP");
     err = init_softap();
 #else
+    ESP_LOGI(TAG, "Starting connection");
     err = connect_wifi();
 #endif
-
+    
     return err;
 }

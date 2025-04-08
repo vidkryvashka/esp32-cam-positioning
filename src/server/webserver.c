@@ -1,26 +1,13 @@
 #include <stdlib.h>
 #include <esp_http_server.h>
-// #include <string.h> //Requires by memset
-// #include "freertos/FreeRTOS.h"
-// #include "freertos/task.h"
-// #include "spi_flash_mmap.h" // #include "esp_spi_flash.h" // #include "esp_system.h" replacement chain, deprecated
-
-// #include "esp_wifi.h"
-// #include "esp_event.h"
-// #include "freertos/event_groups.h"
-// #include "cJSON.h"
-// #include <lwip/sockets.h>
-// #include <lwip/api.h>
-// #include <lwip/netdb.h>
-// #include <lwip/sys.h>
 #include "esp_log.h"
 #include "nvs_flash.h"
 #include "esp_netif.h"
 #include "driver/gpio.h"
 #include <stddef.h>
+#include <string.h>
 
 #include "defs.h"
-
 #include "server/wifi.h"
 #include "server/setting_mdns.h"
 #include "server/webserver.h"
@@ -32,48 +19,34 @@
 #define TAG "esp_webserver"
 #endif
 
-
-static esp_err_t send_web_page(
-    httpd_req_t *req
-) {
+static esp_err_t send_web_page(httpd_req_t *req) {
     return httpd_resp_send(req, (const char *)frontend_index_html, frontend_index_html_len);
 }
 
-
-static esp_err_t get_req_handler(
-    httpd_req_t *req
-) {
+static esp_err_t get_req_handler(httpd_req_t *req) {
     return send_web_page(req);
 }
 
-
-static esp_err_t form_json(
-    char *metadata,
-    const uint16_t metadata_size,
-    const max_brightness_pixels_t *sun_positions
-) {
+static esp_err_t form_json(char *metadata, const uint16_t metadata_size, const max_brightness_pixels_t *sun_positions) {
     snprintf(metadata, metadata_size, 
-                    "{\"count\":%zu,\"center\":{\"x\":%zu,\"y\":%zu},\"coords\":[", 
-                    sun_positions->count,
-                    sun_positions->center_coord.x,
-                    sun_positions->center_coord.y);
+             "{\"count\":%zu,\"center\":{\"x\":%zu,\"y\":%zu},\"coords\":[", 
+             sun_positions->count,
+             sun_positions->center_coord.x,
+             sun_positions->center_coord.y);
     char coord_buf[32];
     for (uint8_t i = 0; i < sun_positions->count; i++) {
         snprintf(coord_buf, sizeof(coord_buf), 
-                "{\"x\":%zu,\"y\":%zu}%s",
-                sun_positions->coords[i].x,
-                sun_positions->coords[i].y,
-                i < sun_positions->count - 1 ? "," : "");
+                 "{\"x\":%zu,\"y\":%zu}%s",
+                 sun_positions->coords[i].x,
+                 sun_positions->coords[i].y,
+                 i < sun_positions->count - 1 ? "," : "");
         strcat(metadata, coord_buf);
     }
     strcat(metadata, "]}");
     return ESP_OK;
 }
 
-
-static esp_err_t jpg_handler(
-    httpd_req_t *req
-) {
+static esp_err_t jpg_handler(httpd_req_t *req) {
     ESP_LOGI(TAG, "got jpg uri req");
 
     camera_fb_t *frame = esp_camera_fb_get();
@@ -118,13 +91,32 @@ static esp_err_t jpg_handler(
 }
 
 
+static esp_err_t rect_handler(httpd_req_t *req) {
+    char buf[128];
+    int ret = httpd_req_recv(req, buf, sizeof(buf) - 1);
+    if (ret <= 0) {
+        httpd_resp_send_500(req);
+        return ESP_FAIL;
+    }
+    buf[ret] = '\0';
+
+    uint8_t topLeftX, topLeftY, bottomRightX, bottomRightY;
+    sscanf(buf, "{\"topLeftX\":%hhu,\"topLeftY\":%hhu,\"bottomRightX\":%hhu,\"bottomRightY\":%hhu}", 
+           &topLeftX, &topLeftY, &bottomRightX, &bottomRightY);
+
+    ESP_LOGI(TAG, "Rectangle coordinates: Top-Left (%d, %d), Bottom-Right (%d, %d)", 
+             topLeftX, topLeftY, bottomRightX, bottomRightY);
+
+    httpd_resp_send(req, "OK", 2);
+    return ESP_OK;
+}
+
 static httpd_uri_t uri_get = {
     .uri = "/",
     .method = HTTP_GET,
     .handler = get_req_handler,
     .user_ctx = NULL
 };
-
 
 static httpd_uri_t uri_camera = {
     .uri = "/camera",
@@ -133,24 +125,27 @@ static httpd_uri_t uri_camera = {
     .user_ctx = NULL
 };
 
+static httpd_uri_t uri_set_rect = {
+    .uri = "/set-rect",
+    .method = HTTP_POST,
+    .handler = rect_handler,
+    .user_ctx = NULL
+};
 
-static httpd_handle_t setup_server(void)
-{
+static httpd_handle_t setup_server(void) {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     httpd_handle_t server = NULL;
 
-    if (httpd_start(&server, &config) == ESP_OK)
-    {
+    if (httpd_start(&server, &config) == ESP_OK) {
         httpd_register_uri_handler(server, &uri_get);
         httpd_register_uri_handler(server, &uri_camera);
+        httpd_register_uri_handler(server, &uri_set_rect);
     }
 
     return server;
 }
 
-
-esp_err_t server_up(void)
-{
+esp_err_t server_up(void) {
     esp_err_t err = ESP_FAIL;
     
     ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
