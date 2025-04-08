@@ -11,10 +11,6 @@
 #include "freertos/task.h"
 #include "driver/gpio.h"
 
-// TAG for debug
-// extern char *TAG; //  = "espressif";
-// #define TAG "espressif"
-
 
 #define BOARD "esp32"
 
@@ -23,11 +19,12 @@
 #define LED_OFF()   gpio_set_level(LED_PIN, 1)
 
 
-
 /** 
  * @brief inits gpio, nvs_flash
  */
 esp_err_t init_esp_things(void);
+
+esp_err_t run_photographer();
 
 // bool esp_camera_inited = false;
 

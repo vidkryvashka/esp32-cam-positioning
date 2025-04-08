@@ -1,9 +1,10 @@
 #include <math.h>
 
-#include "find_sun.h"
+#include "img_processing/find_sun.h"
 
-#define TAG "esp:find_sun"
-
+#ifndef TAG
+#define TAG "find_sun"
+#endif
 
 #define STD_BRIGHTEST_PIXELS_COUNT 16
 
@@ -123,27 +124,6 @@ static max_brightness_pixels_t *find_max_brightness_pixels(
     calc_brightest_center(mbp);
 
     return mbp;
-}
-
-
-esp_err_t get_FOVs(
-    const pixel_coordinate_t *sun_coord,
-    float *FOVs /* with size 2 */
-) {
-    if (sun_coord->x >= FRAME_WIDTH_AND_HEIGHT || sun_coord->y >= FRAME_WIDTH_AND_HEIGHT) {
-        ESP_LOGE(TAG, "get_FOVs got strange sun_coord");
-        return ESP_FAIL;
-    }
-
-    int8_t diff_x = FRAME_WIDTH_AND_HEIGHT/2 - sun_coord->x;
-    int8_t diff_y = FRAME_WIDTH_AND_HEIGHT/2 - sun_coord->y;
-
-    FOVs[0] = atanf((float)diff_x / (float)pixels_focus) * (float)90 / M_PI_2;
-    FOVs[1] = atanf((float)diff_y / (float)pixels_focus) * (float)90 / M_PI_2;
-
-    ESP_LOGI(TAG, "FOVs x: %.2f y: %.2f", FOVs[0], FOVs[1]);
-
-    return ESP_OK;
 }
 
 

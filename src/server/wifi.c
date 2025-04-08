@@ -1,7 +1,7 @@
 #include "server/wifi.h"
 
 #ifndef TAG
-#define TAG "esp_wifi"
+#define TAG "my_wifi"
 #endif
 
 

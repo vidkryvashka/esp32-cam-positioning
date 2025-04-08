@@ -7,16 +7,20 @@
 #include <stddef.h>
 #include <string.h>
 
+
 #include "defs.h"
+
 #include "server/wifi.h"
 #include "server/setting_mdns.h"
 #include "server/webserver.h"
 #include "server/index_html.h"
-#include "camera.h"
-#include "find_sun.h"
+
+#include "img_processing/camera.h"
+#include "img_processing/find_sun.h"
+#include "img_processing/follow_obj_in_img.h"
 
 #ifndef TAG
-#define TAG "esp_webserver"
+#define TAG "my_webserver"
 #endif
 
 static esp_err_t send_web_page(httpd_req_t *req) {
@@ -46,10 +50,10 @@ static esp_err_t form_json(char *metadata, const uint16_t metadata_size, const m
     return ESP_OK;
 }
 
-static esp_err_t jpg_handler(httpd_req_t *req) {
+static esp_err_t req_img_handler(httpd_req_t *req) {
     ESP_LOGI(TAG, "got jpg uri req");
 
-    camera_fb_t *frame = esp_camera_fb_get();
+    camera_fb_t *frame = current_frame; // esp_camera_fb_get();
     if (!frame) {
         ESP_LOGE(TAG, "could't take frame");
         httpd_resp_send_500(req);
@@ -86,7 +90,7 @@ static esp_err_t jpg_handler(httpd_req_t *req) {
     if (err == ESP_OK)  
         ESP_LOGI(TAG, " -- sent picture and metadata -- ");
 
-    esp_camera_fb_return(frame);
+    // esp_camera_fb_return(frame);
     return err;
 }
 
@@ -100,12 +104,12 @@ static esp_err_t rect_handler(httpd_req_t *req) {
     }
     buf[ret] = '\0';
 
-    uint8_t topLeftX, topLeftY, bottomRightX, bottomRightY;
-    sscanf(buf, "{\"topLeftX\":%hhu,\"topLeftY\":%hhu,\"bottomRightX\":%hhu,\"bottomRightY\":%hhu}", 
-           &topLeftX, &topLeftY, &bottomRightX, &bottomRightY);
+    uint8_t topLeftX, topLeftY, width, height;
+    sscanf(buf, "{\"topLeftX\":%hhu,\"topLeftY\":%hhu,\"width\":%hhu,\"height\":%hhu}", 
+           &topLeftX, &topLeftY, &width, &height);
 
-    ESP_LOGI(TAG, "Rectangle coordinates: Top-Left (%d, %d), Bottom-Right (%d, %d)", 
-             topLeftX, topLeftY, bottomRightX, bottomRightY);
+    ESP_LOGI(TAG, "Rectangle coordinates: Top: %d Left: %d, width: %d, height: %d)", 
+             topLeftX, topLeftY, width, height);
 
     httpd_resp_send(req, "OK", 2);
     return ESP_OK;
@@ -121,7 +125,7 @@ static httpd_uri_t uri_get = {
 static httpd_uri_t uri_camera = {
     .uri = "/camera",
     .method = HTTP_GET,
-    .handler = jpg_handler,
+    .handler = req_img_handler,
     .user_ctx = NULL
 };
 
@@ -147,8 +151,6 @@ static httpd_handle_t setup_server(void) {
 
 esp_err_t server_up(void) {
     esp_err_t err = ESP_FAIL;
-    
-    ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
     esp_err_t wifi_err = local_start_wifi();
     set_mdns();
 

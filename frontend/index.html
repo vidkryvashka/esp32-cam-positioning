@@ -140,12 +140,12 @@
     ctx.stroke();
   }
 
-  function sendRectangleCoords(topLeftX, topLeftY, bottomRightX, bottomRightY) {
+  function sendRectangleCoords(topLeftX, topLeftY, width, height) {
     const data = {
       topLeftX: Math.round(topLeftX),
       topLeftY: Math.round(topLeftY),
-      bottomRightX: Math.round(bottomRightX),
-      bottomRightY: Math.round(bottomRightY)
+      width: Math.round(width),
+      height: Math.round(height)
     };
     fetch('/set-rect', {
       method: 'POST',
@@ -184,8 +184,10 @@
     const topLeftY = Math.min(startY, endY) / 5;
     const bottomRightX = Math.max(startX, endX) / 5;
     const bottomRightY = Math.max(startY, endY) / 5;
+    const width = bottomRightX - topLeftX;
+    const height = bottomRightY - topLeftY;
 
-    sendRectangleCoords(topLeftX, topLeftY, bottomRightX, bottomRightY);
+    sendRectangleCoords(topLeftX, topLeftY, width, height);
 
     isRectMode = false;
     document.getElementById('toggle-rect-mode').textContent = 'Select Rectangle';

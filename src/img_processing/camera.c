@@ -12,10 +12,10 @@
 #include "img_converters.h"
 
 #include "defs.h"
-#include "camera.h"
+#include "img_processing/camera.h"
 
 #ifndef TAG
-#define TAG "esp_camera"
+#define TAG "my_camera"
 #endif
 
 // ESP32Cam (AiThinker) PIN Map

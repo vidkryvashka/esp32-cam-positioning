@@ -30,7 +30,10 @@
         "esp_netif.h": "c",
         "stddef.h": "c",
         "cstdlib": "c",
-        "find_sun.h": "c"
+        "find_sun.h": "c",
+        "img_processing.h": "c",
+        "mdns.h": "c",
+        "follow_obj_in_img.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

@@ -13,7 +13,7 @@
 #include "server/setting_mdns.h"
 
 #ifndef TAG
-#define TAG "esp_mdns"
+#define TAG "my_mdns"
 #endif
 
 #define MDNS_HOSTNAME "esp32"
@@ -81,5 +81,5 @@ void set_mdns(void)
     ESP_LOGI(TAG, "   --  got hostname http://%s.local", MDNS_HOSTNAME);
 
     if (xTaskCreate(&mdns_task, "mdns_task", 4096, NULL, 5, NULL) != pdPASS)
-        ESP_LOGE(TAG, "Failed to create mdns_task!");
+        ESP_LOGE(TAG, "Failed to create mdns_task");
 }
