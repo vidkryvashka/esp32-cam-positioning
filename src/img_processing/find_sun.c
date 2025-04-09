@@ -3,7 +3,7 @@
 #include "img_processing/find_sun.h"
 
 #ifndef TAG
-#define TAG "find_sun"
+#define TAG "my_find_sun"
 #endif
 
 #define STD_BRIGHTEST_PIXELS_COUNT 16
@@ -127,7 +127,9 @@ static max_brightness_pixels_t *find_max_brightness_pixels(
 }
 
 
-max_brightness_pixels_t *mark_sun(camera_fb_t *frame) {
+max_brightness_pixels_t *mark_sun(
+    const camera_fb_t *frame
+) {
     max_brightness_pixels_t *mbp = find_max_brightness_pixels(frame);
     float FOVs[2] = {0, 0};
     get_FOVs(&mbp->center_coord, FOVs);

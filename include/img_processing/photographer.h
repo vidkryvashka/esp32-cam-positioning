@@ -1,7 +1,7 @@
 #ifndef FOLLOW_OBJ_IN_IMG_H
 #define FOLLOW_OBJ_IN_IMG_H
 
-#include "img_processing/defs.h"
+#include "img_processing/camera.h"
 
 
 typedef struct rectangle_coords_t {
@@ -12,7 +12,7 @@ typedef struct rectangle_coords_t {
 
 extern bool pause_photographer; // initiated in follow_obj_in_img.c, used in photographer_task, then in webserver.c
 
-esp_err_t compare_frames();
+// esp_err_t compare_frames();
 
 
 #endif

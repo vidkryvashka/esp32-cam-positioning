@@ -24,6 +24,7 @@
  */
 esp_err_t init_esp_things(void);
 
+// #define DEFS_MARK_SUN
 esp_err_t run_photographer();
 
 

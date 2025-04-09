@@ -73,7 +73,7 @@ static camera_config_t camera_config = {
     .grab_mode = CAMERA_GRAB_WHEN_EMPTY,
 };
 
-uint16_t pixels_focus;   // extern declared in camera.h, used in find_sun.c
+uint16_t pixels_focus = 0;   // extern declared in camera.h, used in find_sun.c
 
 esp_err_t init_camera(void)
 {
@@ -92,40 +92,58 @@ esp_err_t init_camera(void)
 }
 
 
-esp_err_t print_pixel_value(
-    camera_fb_t *frame,
-    uint8_t x,
-    uint8_t y
+// esp_err_t print_pixel_value(
+//     camera_fb_t *frame,
+//     uint8_t x,
+//     uint8_t y
+// ) {
+//     if (frame->format != PIXFORMAT_RGB565) {
+//         perror("get_pixel_value wrong PIXFORMAT");
+//         return -1;
+//     }
+// 
+//     if (x >= frame->width || y >= frame->height) {
+//         perror("Coordinates out of bounds!");
+//         return -1;
+//     }
+// 
+//     // frame->buf is (uint8_t *)
+//     uint16_t *pixel_data = (uint16_t *)frame->buf;
+//     // Calculate the index in the buffer
+//     uint16_t index = y * frame->width + x;
+//     uint16_t pixel = pixel_data[index];
+// 
+//     // Each pixel is 2 bytes in RGB565
+//     // bits per colors RRRRRGGG GGGBBBBB
+//     // Extract R, G, B components
+//     uint8_t r = (pixel >> 11) & 0x1F; // 5 bits for red
+//     uint8_t g = (pixel >> 5) & 0x3F;  // 6 bits for green
+//     uint8_t b = pixel & 0x1F;         // 5 bits for blue
+//     printf("RGB565 Pixel at (%zu, %zu): R=%d, G=%d, B=%d\n", x, y, r, g, b);
+// 
+//     return ESP_OK;
+// }
+
+
+esp_err_t get_FOVs(
+    const pixel_coordinate_t *coord,
+    float *FOVs /* with size 2 */
 ) {
-    if (frame->format != PIXFORMAT_RGB565) {
-        perror("get_pixel_value wrong PIXFORMAT");
-        return -1;
+    if (coord->x >= FRAME_WIDTH_AND_HEIGHT || coord->y >= FRAME_WIDTH_AND_HEIGHT) {
+        ESP_LOGE(TAG, "get_FOVs got strange coord");
+        return ESP_FAIL;
     }
 
-    if (x >= frame->width || y >= frame->height) {
-        perror("Coordinates out of bounds!");
-        return -1;
-    }
+    int8_t diff_x = FRAME_WIDTH_AND_HEIGHT/2 - coord->x;
+    int8_t diff_y = FRAME_WIDTH_AND_HEIGHT/2 - coord->y;
 
-    // frame->buf is (uint8_t *)
-    uint16_t *pixel_data = (uint16_t *)frame->buf;
-    // Calculate the index in the buffer
-    uint16_t index = y * frame->width + x;
-    uint16_t pixel = pixel_data[index];
+    FOVs[0] = atanf((float)diff_x / (float)pixels_focus) * (float)90 / M_PI_2;
+    FOVs[1] = atanf((float)diff_y / (float)pixels_focus) * (float)90 / M_PI_2;
 
-    // Each pixel is 2 bytes in RGB565
-    // bits per colors RRRRRGGG GGGBBBBB
-    // Extract R, G, B components
-    uint8_t r = (pixel >> 11) & 0x1F; // 5 bits for red
-    uint8_t g = (pixel >> 5) & 0x3F;  // 6 bits for green
-    uint8_t b = pixel & 0x1F;         // 5 bits for blue
-    printf("RGB565 Pixel at (%zu, %zu): R=%d, G=%d, B=%d\n", x, y, r, g, b);
+    ESP_LOGI("", "FOVs x: %.2f y: %.2f", FOVs[0], FOVs[1]);
 
     return ESP_OK;
 }
-
-
-
 
 
 

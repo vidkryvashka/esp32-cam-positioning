@@ -93,29 +93,46 @@
   function updateImage() {
     fetch('/camera')
       .then(response => {
-        const sunData = JSON.parse(response.headers.get('sun-coords'));
+        const sunData = response.headers.get('sun-coords');
         return response.blob().then(blob => {
           const img = document.getElementById('camera-feed');
           img.src = URL.createObjectURL(blob);
-          console.log('Sun positions:', sunData);
-          drawSunPositions(sunData);
+          if (sunData) {
+            try {
+              const parsedSunData = JSON.parse(sunData);
+              if (parsedSunData && parsedSunData.coords) {
+                console.log('Sun positions:', parsedSunData);
+                drawSunPositions(parsedSunData);
+              }
+            } catch (e) {
+              console.error('Error parsing sun-coords:', e);
+            }
+          }
         });
       })
       .catch(error => console.error('Error:', error));
   }
 
   function drawSunPositions(sunData) {
+    if (!sunData || !sunData.coords || !Array.isArray(sunData.coords)) {
+      console.warn('Invalid or missing sunData.coords');
+      return;
+    }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = 'red';
     sunData.coords.forEach(coord => {
-      ctx.beginPath();
-      ctx.arc(coord.x * 5, coord.y * 5, 3, 0, 2 * Math.PI);
-      ctx.fill();
+      if (coord && typeof coord.x === 'number' && typeof coord.y === 'number') {
+        ctx.beginPath();
+        ctx.arc(coord.x * 5, coord.y * 5, 3, 0, 2 * Math.PI);
+        ctx.fill();
+      }
     });
     ctx.fillStyle = 'purple';
-    ctx.beginPath();
-    ctx.arc(sunData.center.x * 5, sunData.center.y * 5, 5, 0, 2 * Math.PI);
-    ctx.fill();
+    if (sunData.center && typeof sunData.center.x === 'number' && typeof sunData.center.y === 'number') {
+      ctx.beginPath();
+      ctx.arc(sunData.center.x * 5, sunData.center.y * 5, 5, 0, 2 * Math.PI);
+      ctx.fill();
+    }
   }
 
   function startImageUpdate() {

@@ -15,9 +15,9 @@
 #include "server/webserver.h"
 #include "server/index_html.h"
 
-#include "img_processing/camera.h"
+// #include "img_processing/camera.h"
 #include "img_processing/find_sun.h"
-#include "img_processing/follow_obj_in_img.h"
+#include "img_processing/photographer.h"
 
 #ifndef TAG
 #define TAG "my_webserver"
@@ -31,12 +31,13 @@ static esp_err_t get_req_handler(httpd_req_t *req)
 }
 
 
-static esp_err_t form_json(
-    char *metadata,
+static esp_err_t form_sun_json(
+    char *dest_json,
     const uint16_t metadata_size,
-    const max_brightness_pixels_t *sun_positions
+    const camera_fb_t *frame
 ) {
-    snprintf(metadata, metadata_size, 
+    max_brightness_pixels_t *sun_positions = mark_sun(frame);
+    snprintf(dest_json, metadata_size, 
              "{\"count\":%zu,\"center\":{\"x\":%zu,\"y\":%zu},\"coords\":[", 
              sun_positions->count,
              sun_positions->center_coord.x,
@@ -48,16 +49,17 @@ static esp_err_t form_json(
                  sun_positions->coords[i].x,
                  sun_positions->coords[i].y,
                  i < sun_positions->count - 1 ? "," : "");
-        strcat(metadata, coord_buf);
+        strcat(dest_json, coord_buf);
     }
-    strcat(metadata, "]}");
+    strcat(dest_json, "]}");
+    free(sun_positions->coords);
+    free(sun_positions);
     return ESP_OK;
 }
 
 
 static esp_err_t req_img_handler(httpd_req_t *req)
 {
-    // ESP_LOGI(TAG, "got jpg uri req");
     camera_fb_t *frame = current_frame; // esp_camera_fb_get();
     if (!frame) {
         ESP_LOGE(TAG, "could't take frame");
@@ -65,19 +67,22 @@ static esp_err_t req_img_handler(httpd_req_t *req)
         return ESP_FAIL;
     }
 
+#ifdef DEFS_MARK_SUN
+    const uint16_t metadata_size = 512;
+    char metadata_json[metadata_size];
+    form_sun_json(metadata_json, metadata_size, frame);
+#endif
+
     esp_err_t err = ESP_FAIL;
     if (frame->format == PIXFORMAT_RGB565) {
-        max_brightness_pixels_t *sun_positions = mark_sun(frame);
-
         uint8_t *jpg_buf = NULL;
         size_t jpg_buf_len = 0;
         if (frame2jpg(frame, 80, &jpg_buf, &jpg_buf_len)) {
-            const uint16_t metadata_size = 512;
-            char metadata[metadata_size];
-            form_json(metadata, metadata_size, sun_positions);
 
             httpd_resp_set_type(req, "image/jpeg");
-            httpd_resp_set_hdr(req, "sun-coords", metadata);
+#ifdef DEFS_MARK_SUN
+            httpd_resp_set_hdr(req, "sun-coords", metadata_json);
+#endif
             
             err = httpd_resp_send(req, (const char *)jpg_buf, jpg_buf_len);
             free(jpg_buf);
@@ -85,14 +90,12 @@ static esp_err_t req_img_handler(httpd_req_t *req)
             ESP_LOGE(TAG, "JPEG conversion failed");
             httpd_resp_send_500(req);
         }
-        free(sun_positions->coords);
-        free(sun_positions);
     } else {
         ESP_LOGE(TAG, "Unsupported format");
         httpd_resp_send_500(req);
     }
 
-    if (err == ESP_OK)  
+    if (err == ESP_OK)
         ESP_LOGI(TAG, " -- sent picture and metadata -- ");
 
     // esp_camera_fb_return(frame);

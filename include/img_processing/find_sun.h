@@ -1,7 +1,7 @@
 #ifndef FOLLOW_OBJ_IN_IMG_H
 #define FOLLOW_OBJ_IN_IMG_H
 
-#include "img_processing/defs.h"
+#include "img_processing/camera.h"
 
 
 /**
@@ -22,7 +22,7 @@ typedef struct {
  * @param frame takes camera_fb_t*
  * @return max_brightness_pixels_t* which then needs to be freed
  */
-max_brightness_pixels_t *mark_sun(camera_fb_t *frame);
+max_brightness_pixels_t *mark_sun(const camera_fb_t *frame);
 
 
 #endif
