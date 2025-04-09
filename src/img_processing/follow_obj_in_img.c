@@ -5,21 +5,21 @@
 #include "img_processing/follow_obj_in_img.h"
 
 #ifndef TAG
-#define TAG "follow_obj_in_img"
+#define TAG "my_follow_obj_in_img"
 #endif
 
 
 esp_err_t get_FOVs(
-    const pixel_coordinate_t *sun_coord,
+    const pixel_coordinate_t *coord,
     float *FOVs /* with size 2 */
 ) {
-    if (sun_coord->x >= FRAME_WIDTH_AND_HEIGHT || sun_coord->y >= FRAME_WIDTH_AND_HEIGHT) {
-        ESP_LOGE(TAG, "get_FOVs got strange sun_coord");
+    if (coord->x >= FRAME_WIDTH_AND_HEIGHT || coord->y >= FRAME_WIDTH_AND_HEIGHT) {
+        ESP_LOGE(TAG, "get_FOVs got strange coord");
         return ESP_FAIL;
     }
 
-    int8_t diff_x = FRAME_WIDTH_AND_HEIGHT/2 - sun_coord->x;
-    int8_t diff_y = FRAME_WIDTH_AND_HEIGHT/2 - sun_coord->y;
+    int8_t diff_x = FRAME_WIDTH_AND_HEIGHT/2 - coord->x;
+    int8_t diff_y = FRAME_WIDTH_AND_HEIGHT/2 - coord->y;
 
     FOVs[0] = atanf((float)diff_x / (float)pixels_focus) * (float)90 / M_PI_2;
     FOVs[1] = atanf((float)diff_y / (float)pixels_focus) * (float)90 / M_PI_2;
@@ -29,6 +29,7 @@ esp_err_t get_FOVs(
     return ESP_OK;
 }
 
+
 static pixel_coordinate_t coords_history[3] = {
     {0, 0}, {0, 0}, {0, 0}
 };
@@ -36,19 +37,19 @@ static pixel_coordinate_t coords_history[3] = {
 
 static esp_err_t copy_camera_fb(camera_fb_t *dest, camera_fb_t *src) {
     if (src == NULL) {
-        ESP_LOGE("CAMERA", "src is NULL");
+        ESP_LOGE(TAG, "copy_camera_fb src is NULL");
         return ESP_ERR_INVALID_ARG;
     }
 
     if (dest == NULL) {
         dest = (camera_fb_t *)malloc(sizeof(camera_fb_t));
         if (dest == NULL) {
-            ESP_LOGE("CAMERA", "Failed to allocate memory for dest");
+            ESP_LOGE(TAG, "copy_camera_fb failed to allocate memory for dest");
             return ESP_ERR_NO_MEM;
         }
         dest->buf = (uint8_t *)malloc(src->len);
         if (dest->buf == NULL) {
-            ESP_LOGE("CAMERA", "Failed to allocate memory for dest->buf");
+            ESP_LOGE(TAG, "copy_camera_fb failed to allocate memory for dest->buf");
             free(dest);
             dest = NULL;
             return ESP_ERR_NO_MEM;
@@ -86,7 +87,7 @@ static esp_err_t take_photo() {
     copy_camera_fb(prev_frame, current_frame);
     esp_camera_fb_return(current_frame);
     current_frame = esp_camera_fb_get();
-    ESP_LOGI(TAG, "got fb, %d", current_frame != NULL);
+    ESP_LOGI(TAG, "took photo, got fb, %s", current_frame != NULL ? "nice" : "fail");
     if (!current_frame)
         return ESP_FAIL;
     
@@ -94,16 +95,22 @@ static esp_err_t take_photo() {
 }
 
 
+// bool pause_photographer;     // extern declared in img_processing/follow_object_on_img.h
+
 static void photographer_task(void *pvParameters) {
     while (1) {
-        if (take_photo())
-            ESP_LOGE(TAG, "take_photo falls");
+        if (!pause_photographer) {
+            if (take_photo())
+                ESP_LOGE(TAG, "couldn't take_photo");
+        } else
+            ESP_LOGI(TAG, "photographer_task paused");
         vTaskDelay(pdMS_TO_TICKS(PHOTOGRAPHER_DELAY_MS));
     }
 }
 
 
 esp_err_t run_photographer() {
+    pause_photographer = 0;
     current_frame = esp_camera_fb_get();
     void *pvParameters = NULL;
     if (xTaskCreate(&photographer_task,
@@ -113,8 +120,8 @@ esp_err_t run_photographer() {
                     2,
                     NULL)
     ) {
-                ESP_LOGE(TAG, "Failed to create photographer_task");
-                return ESP_FAIL;
+        ESP_LOGE(TAG, "Failed to create photographer_task");
+        return ESP_FAIL;
     }
     return ESP_OK;
 }

@@ -23,15 +23,19 @@
 #define TAG "my_webserver"
 #endif
 
-static esp_err_t send_web_page(httpd_req_t *req) {
+
+
+static esp_err_t get_req_handler(httpd_req_t *req)
+{
     return httpd_resp_send(req, (const char *)frontend_index_html, frontend_index_html_len);
 }
 
-static esp_err_t get_req_handler(httpd_req_t *req) {
-    return send_web_page(req);
-}
 
-static esp_err_t form_json(char *metadata, const uint16_t metadata_size, const max_brightness_pixels_t *sun_positions) {
+static esp_err_t form_json(
+    char *metadata,
+    const uint16_t metadata_size,
+    const max_brightness_pixels_t *sun_positions
+) {
     snprintf(metadata, metadata_size, 
              "{\"count\":%zu,\"center\":{\"x\":%zu,\"y\":%zu},\"coords\":[", 
              sun_positions->count,
@@ -50,9 +54,10 @@ static esp_err_t form_json(char *metadata, const uint16_t metadata_size, const m
     return ESP_OK;
 }
 
-static esp_err_t req_img_handler(httpd_req_t *req) {
-    ESP_LOGI(TAG, "got jpg uri req");
 
+static esp_err_t req_img_handler(httpd_req_t *req)
+{
+    // ESP_LOGI(TAG, "got jpg uri req");
     camera_fb_t *frame = current_frame; // esp_camera_fb_get();
     if (!frame) {
         ESP_LOGE(TAG, "could't take frame");
@@ -95,7 +100,17 @@ static esp_err_t req_img_handler(httpd_req_t *req) {
 }
 
 
-static esp_err_t rect_handler(httpd_req_t *req) {
+bool pause_photographer = 0;    // extern declared in img_processing/follow_object_on_img.h
+
+static esp_err_t pause_handler(httpd_req_t *req)
+{
+    pause_photographer = 1;
+    httpd_resp_send(req, "Paused", 6);
+    return ESP_OK;
+}
+
+static esp_err_t rect_handler(httpd_req_t *req)
+{
     char buf[128];
     int ret = httpd_req_recv(req, buf, sizeof(buf) - 1);
     if (ret <= 0) {
@@ -112,6 +127,7 @@ static esp_err_t rect_handler(httpd_req_t *req) {
              topLeftX, topLeftY, width, height);
 
     httpd_resp_send(req, "OK", 2);
+    pause_photographer = 0;
     return ESP_OK;
 }
 
@@ -129,6 +145,13 @@ static httpd_uri_t uri_camera = {
     .user_ctx = NULL
 };
 
+static httpd_uri_t uri_pause = {
+    .uri = "/pause",
+    .method = HTTP_GET,
+    .handler = pause_handler,
+    .user_ctx = NULL
+};
+
 static httpd_uri_t uri_set_rect = {
     .uri = "/set-rect",
     .method = HTTP_POST,
@@ -136,20 +159,23 @@ static httpd_uri_t uri_set_rect = {
     .user_ctx = NULL
 };
 
-static httpd_handle_t setup_server(void) {
+static httpd_handle_t setup_server(void)
+{
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     httpd_handle_t server = NULL;
 
     if (httpd_start(&server, &config) == ESP_OK) {
         httpd_register_uri_handler(server, &uri_get);
         httpd_register_uri_handler(server, &uri_camera);
+        httpd_register_uri_handler(server, &uri_pause);
         httpd_register_uri_handler(server, &uri_set_rect);
     }
 
     return server;
 }
 
-esp_err_t server_up(void) {
+esp_err_t server_up(void)
+{
     esp_err_t err = ESP_FAIL;
     esp_err_t wifi_err = local_start_wifi();
     set_mdns();

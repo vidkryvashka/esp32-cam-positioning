@@ -10,6 +10,8 @@ typedef struct rectangle_coords_t {
     pixel_coordinate_t down_right;
 };
 
+extern bool pause_photographer; // initiated in follow_obj_in_img.c, used in photographer_task, then in webserver.c
+
 esp_err_t compare_frames();
 
 

@@ -59,8 +59,6 @@ esp_err_t init_esp_things(void)
     }
     ESP_ERROR_CHECK(nvs_flash_err);
 
-    
-
     esp_err_t err = gpio_err && nvs_flash_err;
 
     return err;

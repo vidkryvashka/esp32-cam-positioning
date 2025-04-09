@@ -1,14 +1,14 @@
 #ifndef IMG_PROCESSING_DEFS_H
 #define IMG_PROCESSING_DEFS_H
 
-// #include "defs.h"    // calls self
+#include "../defs.h"    // instead calls self
 #include "img_processing/camera.h"
 
 
-#define PHOTOGRAPHER_DELAY_MS 1000
+#define PHOTOGRAPHER_DELAY_MS 15100
 
 extern int8_t current_frame_avialable;
-extern camera_fb_t *current_frame;
+extern camera_fb_t *current_frame;  // initiated in follow_obj_in_img.c, used in take photo and then in webserver.c
 
 /**
  * @brief holds small coords uint8_t
@@ -22,7 +22,7 @@ typedef struct {
 /**
  * @brief calculates X Y degrees from point to center of frame
  * 
- * @param sun_coord input point
+ * @param coord input point
  * @param fovs2write output int8_t array must be size 2
  * @return errors
  */

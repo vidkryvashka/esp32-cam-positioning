@@ -161,6 +161,7 @@
 
   canvas.addEventListener('mousedown', (e) => {
     if (!isRectMode) return;
+    
     const rect = canvas.getBoundingClientRect();
     startX = e.clientX - rect.left;
     startY = e.clientY - rect.top;
@@ -191,16 +192,20 @@
 
     isRectMode = false;
     document.getElementById('toggle-rect-mode').textContent = 'Select Rectangle';
-    startImageUpdate();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    startImageUpdate();
     startX = startY = endX = endY = undefined;
   });
 
   document.getElementById('toggle-rect-mode').addEventListener('click', () => {
     if (!isRectMode) {
-      stopImageUpdate();
       isRectMode = true;
       document.getElementById('toggle-rect-mode').textContent = 'Selecting...';
+      stopImageUpdate();
+      fetch('/pause')
+        .then(response => response.text())
+        .then(text => console.log('Server paused:', text))
+        .catch(error => console.error('Error pausing:', error));
     }
   });
 

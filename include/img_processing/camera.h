@@ -30,13 +30,14 @@
 /**
  * @brief distance from camera to focus in pixels related to frame size and camera FOV (56 degrees)
  * should be calculated in esp_err_t init_camera(void);
+ * used in get_FOVs
  */
 extern uint16_t pixels_focus;
 
 esp_err_t init_camera(void);
 
 // camera_fb_t *frame = esp_camera_fb_get();    // take photo
-// esp_camera_fb_return(frame); // clear photo
+// esp_camera_fb_return(frame); // return photo buffer back to pool, not clear
 
 #endif
 
