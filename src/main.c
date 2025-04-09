@@ -1,9 +1,9 @@
 #include "defs.h"
 #include "server/webserver.h"
-#include "img_processing/follow_obj_in_img.h"
+#include "img_processing/photographer.h"
 
 #ifndef TAG
-#define TAG "main"
+#define TAG "my_main"
 #endif
 
 
@@ -14,6 +14,5 @@ void app_main(void)
 
     init_camera();
     run_photographer();
-    // compare_frames();
     server_up();
 }

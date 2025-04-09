@@ -1,7 +1,7 @@
 #ifndef FOLLOW_OBJ_IN_IMG_H
 #define FOLLOW_OBJ_IN_IMG_H
 
-#include "img_processing/defs.h"
+#include "img_processing/camera.h"
 
 
 /**

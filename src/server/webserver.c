@@ -1,11 +1,12 @@
+#include <stddef.h>
+#include <string.h>
 #include <stdlib.h>
 #include <esp_http_server.h>
 #include "esp_log.h"
 #include "nvs_flash.h"
 #include "esp_netif.h"
 #include "driver/gpio.h"
-#include <stddef.h>
-#include <string.h>
+#include "freertos/semphr.h"
 
 
 #include "defs.h"
@@ -17,7 +18,7 @@
 
 #include "img_processing/camera.h"
 #include "img_processing/find_sun.h"
-#include "img_processing/follow_obj_in_img.h"
+#include "img_processing/photographer.h"
 
 #ifndef TAG
 #define TAG "my_webserver"
@@ -55,10 +56,20 @@ static esp_err_t form_json(
 }
 
 
+// SemaphoreHandle_t frame_mutex;
+
 static esp_err_t req_img_handler(httpd_req_t *req)
 {
     // ESP_LOGI(TAG, "got jpg uri req");
-    camera_fb_t *frame = current_frame; // esp_camera_fb_get();
+
+    // if (xSemaphoreTake(frame_mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
+    //     ESP_LOGE(TAG, "Failed to take frame_mutex");
+    //     httpd_resp_send_500(req);
+    //     return ESP_FAIL;
+    // }
+
+    // camera_fb_t *frame = esp_camera_fb_get();
+    camera_fb_t *frame = current_frame;
     if (!frame) {
         ESP_LOGE(TAG, "could't take frame");
         httpd_resp_send_500(req);
@@ -67,7 +78,7 @@ static esp_err_t req_img_handler(httpd_req_t *req)
 
     esp_err_t err = ESP_FAIL;
     if (frame->format == PIXFORMAT_RGB565) {
-        max_brightness_pixels_t *sun_positions = mark_sun(frame);
+        max_brightness_pixels_t *sun_positions = NULL;  // mark_sun(frame);
 
         uint8_t *jpg_buf = NULL;
         size_t jpg_buf_len = 0;
@@ -85,17 +96,19 @@ static esp_err_t req_img_handler(httpd_req_t *req)
             ESP_LOGE(TAG, "JPEG conversion failed");
             httpd_resp_send_500(req);
         }
-        free(sun_positions->coords);
-        free(sun_positions);
+        // free(sun_positions->coords);
+        // free(sun_positions);
     } else {
         ESP_LOGE(TAG, "Unsupported format");
         httpd_resp_send_500(req);
     }
 
-    if (err == ESP_OK)  
+    if (err == ESP_OK)
         ESP_LOGI(TAG, " -- sent picture and metadata -- ");
 
     // esp_camera_fb_return(frame);
+    
+    // xSemaphoreGive(frame_mutex);
     return err;
 }
 

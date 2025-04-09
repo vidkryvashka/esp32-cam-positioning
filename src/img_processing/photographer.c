@@ -2,40 +2,23 @@
 #include "string.h"
 #include "esp_timer.h"
 
-#include "img_processing/follow_obj_in_img.h"
+#include "img_processing/photographer.h"
 
 #ifndef TAG
-#define TAG "my_follow_obj_in_img"
+#define TAG "my_photographer"
 #endif
 
 
-esp_err_t get_FOVs(
-    const pixel_coordinate_t *coord,
-    float *FOVs /* with size 2 */
-) {
-    if (coord->x >= FRAME_WIDTH_AND_HEIGHT || coord->y >= FRAME_WIDTH_AND_HEIGHT) {
-        ESP_LOGE(TAG, "get_FOVs got strange coord");
-        return ESP_FAIL;
-    }
 
-    int8_t diff_x = FRAME_WIDTH_AND_HEIGHT/2 - coord->x;
-    int8_t diff_y = FRAME_WIDTH_AND_HEIGHT/2 - coord->y;
-
-    FOVs[0] = atanf((float)diff_x / (float)pixels_focus) * (float)90 / M_PI_2;
-    FOVs[1] = atanf((float)diff_y / (float)pixels_focus) * (float)90 / M_PI_2;
-
-    ESP_LOGI("", "FOVs x: %.2f y: %.2f", FOVs[0], FOVs[1]);
-
-    return ESP_OK;
-}
+// static pixel_coordinate_t coords_history[3] = {
+//     {0, 0}, {0, 0}, {0, 0}
+// };
 
 
-static pixel_coordinate_t coords_history[3] = {
-    {0, 0}, {0, 0}, {0, 0}
-};
+int8_t frames_avialable = 0;
 
-
-static esp_err_t copy_camera_fb(camera_fb_t *dest, camera_fb_t *src) {
+static esp_err_t copy_camera_fb(camera_fb_t *dest, camera_fb_t *src)
+{
     if (src == NULL) {
         ESP_LOGE(TAG, "copy_camera_fb src is NULL");
         return ESP_ERR_INVALID_ARG;
@@ -67,37 +50,61 @@ static esp_err_t copy_camera_fb(camera_fb_t *dest, camera_fb_t *src) {
     return ESP_OK;
 }
 
-static void free_camera_fb(camera_fb_t *frame) {
+
+static void free_camera_fb(camera_fb_t *frame)
+{
+    ESP_LOGI(TAG, "free_camera_fb");
     free(frame->buf);
     frame->buf = NULL;
     free(frame);
 }
 
 
+SemaphoreHandle_t frame_mutex = NULL;
 static camera_fb_t *prev_frame = NULL;
-camera_fb_t *current_frame;
+camera_fb_t *current_frame = NULL;
 // static int dt = 0;
 
+static esp_err_t take_photo()
+{
+    // ESP_LOGI(TAG, "called take_photo");
+    if (xSemaphoreTake(frame_mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
+        ESP_LOGE(TAG, "Failed to take frame_mutex");
+        return ESP_FAIL;
+    }
 
-static esp_err_t take_photo() {
     if (prev_frame != NULL) {
+        -- frames_avialable;
         free_camera_fb(prev_frame);
         prev_frame = NULL;
     }
     copy_camera_fb(prev_frame, current_frame);
     esp_camera_fb_return(current_frame);
-    current_frame = esp_camera_fb_get();
-    ESP_LOGI(TAG, "took photo, got fb, %s", current_frame != NULL ? "nice" : "fail");
-    if (!current_frame)
+
+    camera_fb_t *new_frame = esp_camera_fb_get();
+    if (!new_frame) {
+        ESP_LOGE(TAG, "Failed to get new frame");
+        xSemaphoreGive(frame_mutex);
         return ESP_FAIL;
-    
+    }
+
+    current_frame = new_frame;
+    ++ frames_avialable;
+
+    ESP_LOGI(TAG, "took photo, got fb, %s, frames_avialable %d",
+             current_frame != NULL ? "nice" : "FAIL", frames_avialable);
+
+    xSemaphoreGive(frame_mutex);
     return ESP_OK;
 }
 
 
 // bool pause_photographer;     // extern declared in img_processing/follow_object_on_img.h
 
-static void photographer_task(void *pvParameters) {
+static void photographer_task(void *pvParameters)
+{
+    ESP_LOGI(TAG, "start photographer_task");
+
     while (1) {
         if (!pause_photographer) {
             if (take_photo())
@@ -109,25 +116,28 @@ static void photographer_task(void *pvParameters) {
 }
 
 
-esp_err_t run_photographer() {
+esp_err_t run_photographer()
+{
+    ESP_LOGI(TAG, "start run_photographer");
     pause_photographer = 0;
-    current_frame = esp_camera_fb_get();
-    void *pvParameters = NULL;
-    if (xTaskCreate(&photographer_task,
+    current_frame = NULL;
+    frame_mutex = xSemaphoreCreateMutex();
+    BaseType_t e = xTaskCreate(&photographer_task,
                     "photographer_task",
                     4096,
-                    pvParameters,
+                    NULL,
                     2,
-                    NULL)
-    ) {
-        ESP_LOGE(TAG, "Failed to create photographer_task");
+                    NULL);
+    if (e) {
+        ESP_LOGE(TAG, "Failed to create photographer_task, e %d", e);
         return ESP_FAIL;
     }
     return ESP_OK;
 }
 
 
-esp_err_t compare_frames() {
+esp_err_t compare_frames()
+{
     return 0;
 }
 

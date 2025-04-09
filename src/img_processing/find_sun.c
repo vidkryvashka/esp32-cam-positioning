@@ -3,7 +3,7 @@
 #include "img_processing/find_sun.h"
 
 #ifndef TAG
-#define TAG "find_sun"
+#define TAG "my_find_sun"
 #endif
 
 #define STD_BRIGHTEST_PIXELS_COUNT 16
