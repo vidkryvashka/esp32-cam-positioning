@@ -73,6 +73,11 @@ static camera_config_t camera_config = {
     .grab_mode = CAMERA_GRAB_WHEN_EMPTY,
 };
 
+/**
+ * @brief distance from camera to focus in pixels related to frame size and camera FOV (I measured 56 degrees in horizontal)
+ * should be calculated in esp_err_t init_camera(void);
+ * used in get_FOVs
+ */
 uint16_t pixels_focus = 0;   // extern declared in camera.h, used in find_sun.c
 
 esp_err_t init_camera(void)

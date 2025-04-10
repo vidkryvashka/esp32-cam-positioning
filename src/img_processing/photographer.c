@@ -8,21 +8,27 @@
 #define TAG "my_photographer"
 #endif
 
+// // for prediction, Kalman filter, not implemented yet
+// static pixel_coordinate_t coords_history[3] = {
+//     {0, 0}, {0, 0}, {0, 0}
+// };
 
-static pixel_coordinate_t coords_history[3] = {
-    {0, 0}, {0, 0}, {0, 0}
-};
 
-
+volatile SemaphoreHandle_t frame_mutex;
 camera_fb_t *current_frame = NULL;
 // static int dt = 0;
 
 
 static esp_err_t take_photo()
 {
+    if (xSemaphoreTake(frame_mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
+        ESP_LOGE(TAG, "Failed to take frame_mutex");
+        return ESP_FAIL;
+    }
     if (current_frame != NULL)
         esp_camera_fb_return(current_frame);
     current_frame = esp_camera_fb_get();
+    xSemaphoreGive(frame_mutex);
     ESP_LOGI(TAG, "took photo%s", current_frame != NULL ? ", got fb, nice" : ", fail");
     if (!current_frame)
         return ESP_FAIL;
@@ -31,7 +37,7 @@ static esp_err_t take_photo()
 }
 
 
-// bool pause_photographer;     // extern declared in img_processing/follow_object_on_img.h
+volatile bool pause_photographer = 0;   // extern declared in img_processing/photographer.h, used in webserver.c
 
 static void photographer_task(void *pvParameters)
 {
@@ -48,7 +54,7 @@ static void photographer_task(void *pvParameters)
 
 esp_err_t run_photographer()
 {
-    pause_photographer = 0;
+    frame_mutex = xSemaphoreCreateMutex();
     current_frame = esp_camera_fb_get();
     if (xTaskCreate(&photographer_task,
                     "photographer_task",
@@ -62,12 +68,6 @@ esp_err_t run_photographer()
     }
     return ESP_OK;
 }
-
-
-// esp_err_t compare_frames()
-// {
-//     return 0;
-// }
 
 
 // void primitive_photographer()

@@ -15,8 +15,10 @@
 #include "server/webserver.h"
 #include "server/index_html.h"
 
-// #include "img_processing/camera.h"
-#include "img_processing/find_sun.h"
+#include "img_processing/camera.h"
+#if DEFS_MARK_SUN == 1
+    #include "img_processing/find_sun.h"
+#endif
 #include "img_processing/photographer.h"
 
 #ifndef TAG
@@ -30,7 +32,7 @@ static esp_err_t get_req_handler(httpd_req_t *req)
     return httpd_resp_send(req, (const char *)frontend_index_html, frontend_index_html_len);
 }
 
-
+#if DEFS_MARK_SUN == 1
 static esp_err_t form_sun_json(
     char *dest_json,
     const uint16_t metadata_size,
@@ -56,10 +58,15 @@ static esp_err_t form_sun_json(
     free(sun_positions);
     return ESP_OK;
 }
+#endif
 
 
 static esp_err_t req_img_handler(httpd_req_t *req)
 {
+    if (xSemaphoreTake(frame_mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
+        ESP_LOGE(TAG, "Failed to take frame_mutex");
+        return ESP_FAIL;
+    }
     camera_fb_t *frame = current_frame; // esp_camera_fb_get();
     if (!frame) {
         ESP_LOGE(TAG, "could't take frame");
@@ -67,24 +74,23 @@ static esp_err_t req_img_handler(httpd_req_t *req)
         return ESP_FAIL;
     }
 
-#ifdef DEFS_MARK_SUN
+    bool is_sun_hdr = 0;
+#if DEFS_MARK_SUN == 1
     const uint16_t metadata_size = 512;
     char metadata_json[metadata_size];
     form_sun_json(metadata_json, metadata_size, frame);
 #endif
 
-    esp_err_t err = ESP_FAIL;
+    esp_err_t resp_err = ESP_FAIL;
     if (frame->format == PIXFORMAT_RGB565) {
         uint8_t *jpg_buf = NULL;
         size_t jpg_buf_len = 0;
         if (frame2jpg(frame, 80, &jpg_buf, &jpg_buf_len)) {
-
             httpd_resp_set_type(req, "image/jpeg");
-#ifdef DEFS_MARK_SUN
-            httpd_resp_set_hdr(req, "sun-coords", metadata_json);
+#if DEFS_MARK_SUN == 1
+            is_sun_hdr = ! httpd_resp_set_hdr(req, "sun-coords", metadata_json);
 #endif
-            
-            err = httpd_resp_send(req, (const char *)jpg_buf, jpg_buf_len);
+            resp_err = httpd_resp_send(req, (const char *)jpg_buf, jpg_buf_len);
             free(jpg_buf);
         } else {
             ESP_LOGE(TAG, "JPEG conversion failed");
@@ -94,16 +100,19 @@ static esp_err_t req_img_handler(httpd_req_t *req)
         ESP_LOGE(TAG, "Unsupported format");
         httpd_resp_send_500(req);
     }
+    xSemaphoreGive(frame_mutex);
 
-    if (err == ESP_OK)
-        ESP_LOGI(TAG, " -- sent picture and metadata -- ");
+    if (resp_err == ESP_OK)
+        ESP_LOGI(TAG, " -- sent picture %s-- ",
+            is_sun_hdr ? "and sun metadata " : "");
 
     // esp_camera_fb_return(frame);
-    return err;
+    return resp_err;
 }
 
 
-bool pause_photographer = 0;    // extern declared in img_processing/follow_object_on_img.h
+// idk why, must be inited here to use on both sides, unlike frame
+// volatile bool pause_photographer = 0;    // extern declared in img_processing/photographer.h
 
 static esp_err_t pause_handler(httpd_req_t *req)
 {

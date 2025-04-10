@@ -1,4 +1,11 @@
+# todo
+
 * зробити визначення переміщення об'єкта порівнянням зображень
+
+
+
+
+
 
 ## (необов'язково)
 
@@ -13,3 +20,7 @@
 
 ## fanfacts
 * дисторсія
+
+
+## done to commit -m
+fixed webserver configurable marksun, added frame_mutex, replaced pause_photographer. refactor, clearing naming, debug.

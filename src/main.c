@@ -14,6 +14,5 @@ void app_main(void)
 
     init_camera();
     run_photographer();
-    // compare_frames();
     server_up();
 }

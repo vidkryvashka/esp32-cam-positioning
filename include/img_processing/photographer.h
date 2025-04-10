@@ -4,15 +4,17 @@
 #include "img_processing/camera.h"
 
 
-typedef struct rectangle_coords_t {
-    bool avialable;
-    pixel_coordinate_t up_left;
-    pixel_coordinate_t down_right;
-};
+// typedef struct rectangle_coords_t {
+//     bool avialable;
+//     pixel_coordinate_t up_left;
+//     pixel_coordinate_t down_right;
+// };
 
-extern bool pause_photographer; // initiated in follow_obj_in_img.c, used in photographer_task, then in webserver.c
 
-// esp_err_t compare_frames();
+extern volatile bool pause_photographer; // initiated in photographer.c, used in photographer_task, then in webserver.c
+// extern volatile SemaphoreHandle_t pause_photographer_mutex; // like an idea
+
+esp_err_t run_photographer();
 
 
 #endif
