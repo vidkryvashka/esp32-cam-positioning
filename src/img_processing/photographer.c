@@ -1,32 +1,60 @@
 #include <math.h>
 #include "string.h"
 #include "esp_timer.h"
+#include "esp_random.h"
 
 #include "img_processing/photographer.h"
+#include "img_processing/operating_with_fb.h"
 
 #ifndef TAG
 #define TAG "my_photographer"
 #endif
 
-// // for prediction, Kalman filter, not implemented yet
-// static pixel_coordinate_t coords_history[3] = {
-//     {0, 0}, {0, 0}, {0, 0}
-// };
+
+volatile bool pause_photographer = 0;   // extern declared in img_processing/photographer.h, used in webserver.c
+
+
+// for prediction, Kalman filter, not implemented yet
+#define MAX_COORDS_AMOUNT 3
+uint8_t coords_amount = 0;
+static pixel_coordinate_t coords_history[MAX_COORDS_AMOUNT] = {
+    {0, 0}, {0, 0}, {0, 0}
+};
+
+
+static camera_fb_t *fragment = NULL; 
+
+camera_fb_t * write_fragment(rectangle_coords_t rect_coords) {
+    ESP_LOGI(TAG, "Rectangle coordinates: top teft: %d %d, width: %d, height: %d)",
+             rect_coords.top_left.x, rect_coords.top_left.y, rect_coords.width, rect_coords.height);
+    if (fragment != NULL)
+        camera_fb_free(fragment);
+    fragment = camera_fb_crop(current_frame, &rect_coords);
+    coords_history[coords_amount] = (pixel_coordinate_t) {
+        .x = rect_coords.top_left.x + rect_coords.width / 2,
+        .y = rect_coords.top_left.y + rect_coords.height / 2
+    };
+    pause_photographer = 0;
+    ESP_LOGI(TAG, "Unpause");
+
+    return fragment;
+}
 
 
 volatile SemaphoreHandle_t frame_mutex;
 camera_fb_t *current_frame = NULL;
-// static int dt = 0;
+// static int dt = 0;   // for prediction
 
 
 static esp_err_t take_photo()
 {
-    if (xSemaphoreTake(frame_mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
-        ESP_LOGE(TAG, "Failed to take frame_mutex");
+    if (xSemaphoreTake(frame_mutex, pdMS_TO_TICKS(5000)) != pdTRUE) {
+        ESP_LOGE(TAG, "Failed to take frame_mutex ");
         return ESP_FAIL;
     }
-    if (current_frame != NULL)
+    if (current_frame != NULL) {
         esp_camera_fb_return(current_frame);
+    }
     current_frame = esp_camera_fb_get();
     xSemaphoreGive(frame_mutex);
     ESP_LOGI(TAG, "took photo%s", current_frame != NULL ? ", got fb, nice" : ", fail");
@@ -37,17 +65,17 @@ static esp_err_t take_photo()
 }
 
 
-volatile bool pause_photographer = 0;   // extern declared in img_processing/photographer.h, used in webserver.c
-
 static void photographer_task(void *pvParameters)
 {
     while (1) {
         if (!pause_photographer) {
             if (take_photo())
-                ESP_LOGE(TAG, "couldn't take_photo");
+                ESP_LOGE(TAG, "couldn't take_photo ");
         } else
             ESP_LOGI(TAG, "photographer_task paused");
         vTaskDelay(pdMS_TO_TICKS(PHOTOGRAPHER_DELAY_MS));
+        if (!(esp_random() % 3))
+            log_memory();
     }
 }
 
@@ -70,6 +98,20 @@ esp_err_t run_photographer()
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // void primitive_photographer()
 // {
 //     float FOVs[2] = {0, 0};
@@ -82,3 +124,17 @@ esp_err_t run_photographer()
 //         vTaskDelay(pdMS_TO_TICKS(1000));
 //     }
 // }
+
+
+
+// /**
+//  * @brief Data structure of camera frame buffer
+//  */
+// typedef struct {
+//     uint8_t * buf;              /*!< Pointer to the pixel data */
+//     size_t len;                 /*!< Length of the buffer in bytes */
+//     size_t width;               /*!< Width of the buffer in pixels */
+//     size_t height;              /*!< Height of the buffer in pixels */
+//     pixformat_t format;         /*!< Format of the pixel data */
+//     struct timeval timestamp;   /*!< Timestamp since boot of the first DMA buffer of the frame */
+// } camera_fb_t;

@@ -8,7 +8,7 @@
 #include "defs.h"
 
 #ifndef TAG
-#define TAG "esp_things"
+#define TAG "my_esp_things"
 #endif
 
 // support IDF 5.x
@@ -21,6 +21,7 @@
 #define BLINK_PERIOD pdMS_TO_TICKS(150)
 
 
+
 static esp_err_t init_gpio(void)
 {
     esp_err_t err = ESP_FAIL;
@@ -30,17 +31,6 @@ static esp_err_t init_gpio(void)
     err = ESP_OK;
     
     return err;
-}
-
-
-void led_blink(float periods, uint8_t count)
-{
-    for (uint8_t def_i = 0; def_i < count; ++def_i) {
-        LED_ON();
-        vTaskDelay(BLINK_PERIOD * periods);
-        LED_OFF();
-        vTaskDelay(BLINK_PERIOD * periods);
-    }
 }
 
 
@@ -62,4 +52,25 @@ esp_err_t init_esp_things(void)
     esp_err_t err = gpio_err && nvs_flash_err;
 
     return err;
+}
+
+
+void led_blink(float periods, uint8_t count)
+{
+    for (uint8_t def_i = 0; def_i < count; ++ def_i) {
+        LED_ON();
+        vTaskDelay(BLINK_PERIOD * periods);
+        LED_OFF();
+        vTaskDelay(BLINK_PERIOD * periods);
+    }
+}
+
+
+void log_memory()
+{
+    size_t free_size = heap_caps_get_free_size(MALLOC_CAP_DEFAULT);
+    size_t total_size = heap_caps_get_total_size(MALLOC_CAP_DEFAULT);
+    size_t used_size = total_size - free_size;
+    ESP_LOGI(TAG, "  --  memory used %d / %d (%.2f %%) ", used_size, total_size,
+        (float)used_size * 100 / (float)total_size);
 }

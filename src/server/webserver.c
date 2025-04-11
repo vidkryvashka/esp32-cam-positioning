@@ -29,6 +29,7 @@
 
 static esp_err_t get_req_handler(httpd_req_t *req)
 {
+    ESP_LOGI(TAG, " -- sent page -- "); // almost
     return httpd_resp_send(req, (const char *)frontend_index_html, frontend_index_html_len);
 }
 
@@ -63,13 +64,15 @@ static esp_err_t form_sun_json(
 
 static esp_err_t req_img_handler(httpd_req_t *req)
 {
+    ESP_LOGI(TAG, "got img req");
     if (xSemaphoreTake(frame_mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
         ESP_LOGE(TAG, "Failed to take frame_mutex");
+        httpd_resp_send_500(req);
         return ESP_FAIL;
     }
     camera_fb_t *frame = current_frame; // esp_camera_fb_get();
     if (!frame) {
-        ESP_LOGE(TAG, "could't take frame");
+        ESP_LOGE(TAG, "could't access frame");
         httpd_resp_send_500(req);
         return ESP_FAIL;
     }
@@ -131,15 +134,25 @@ static esp_err_t rect_handler(httpd_req_t *req)
     }
     buf[ret] = '\0';
 
-    uint8_t topLeftX, topLeftY, width, height;
-    sscanf(buf, "{\"topLeftX\":%hhu,\"topLeftY\":%hhu,\"width\":%hhu,\"height\":%hhu}", 
-           &topLeftX, &topLeftY, &width, &height);
+    rectangle_coords_t rect_coords;
+    if (sscanf(buf, "{\"topLeftX\":%hhu,\"topLeftY\":%hhu,\"width\":%hhu,\"height\":%hhu}", 
+           &rect_coords.top_left.x, &rect_coords.top_left.y, &rect_coords.width, &rect_coords.height
+    ) >= 0)
+        httpd_resp_send(req, "Got rectangle coords", 20);
 
-    ESP_LOGI(TAG, "Rectangle coordinates: Top: %d Left: %d, width: %d, height: %d)", 
-             topLeftX, topLeftY, width, height);
 
-    httpd_resp_send(req, "OK", 2);
-    pause_photographer = 0;
+    // ESP_LOGI(TAG, "Rectangle coordinates: Top: %d Left: %d, width: %d, height: %d)", 
+    //          top_left.x, top_left.y, width, height);
+
+
+    if (xSemaphoreTake(frame_mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
+        ESP_LOGE(TAG, "Failed to take frame_mutex on fragment");
+    } else {
+        esp_camera_fb_return(current_frame);
+        current_frame = write_fragment(rect_coords);
+        // pause_photographer = 0;
+        xSemaphoreGive(frame_mutex);
+    }
     return ESP_OK;
 }
 

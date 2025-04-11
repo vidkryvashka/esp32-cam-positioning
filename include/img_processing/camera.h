@@ -23,8 +23,6 @@
 
 #define BOARD_ESP32CAM_AITHINKER
 
-// static const char *TAG = "example:take_picture";
-
 #if ESP_CAMERA_SUPPORTED
 
 #define FRAME_WIDTH_AND_HEIGHT 96   // in camera.c static camera_config_t camera_config .frame_size = FRAMESIZE_96X96
@@ -35,8 +33,6 @@ esp_err_t init_camera(void);
 extern volatile SemaphoreHandle_t frame_mutex;
 extern camera_fb_t *current_frame;  // initiated in photographer.c, used in take photo and then in webserver.c
 
-#define PHOTOGRAPHER_DELAY_MS 1500
-
 
 /**
  * @brief holds small coords uint8_t
@@ -45,6 +41,13 @@ typedef struct {
     uint8_t x;
     uint8_t y;
 } pixel_coordinate_t;
+
+
+typedef struct {
+    pixel_coordinate_t top_left;
+    uint8_t width;
+    uint8_t height;
+} rectangle_coords_t;
 
 
 /**

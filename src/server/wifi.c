@@ -50,7 +50,7 @@ static void event_handler(
 static void form_wifi_points(
     wifi_sta_config_t *wifi_points
 ) {
-    const wifi_sta_config_t wifi_points_temp[CONFIG_ESP_WIFI_MAX_POINTS_NUMBER] = {
+    const wifi_sta_config_t wifi_points_src[CONFIG_ESP_WIFI_MAX_POINTS_NUMBER] = {
         {CONFIG_ESP_WIFI_SSID_0, CONFIG_ESP_WIFI_PASSWD_0, .threshold.authmode = WIFI_AUTH_WPA2_PSK},
         {CONFIG_ESP_WIFI_SSID_1, CONFIG_ESP_WIFI_PASSWD_1, .threshold.authmode = WIFI_AUTH_WPA2_PSK},
         {CONFIG_ESP_WIFI_SSID_2, CONFIG_ESP_WIFI_PASSWD_2, .threshold.authmode = WIFI_AUTH_WPA2_PSK},
@@ -58,7 +58,7 @@ static void form_wifi_points(
         {CONFIG_ESP_WIFI_SSID_4, CONFIG_ESP_WIFI_PASSWD_4, .threshold.authmode = WIFI_AUTH_WPA2_PSK},
     };
     
-    memcpy(wifi_points, wifi_points_temp, sizeof(wifi_points_temp));
+    memcpy(wifi_points, wifi_points_src, sizeof(wifi_points_src));
 }
 
 
@@ -73,13 +73,13 @@ static esp_err_t find_wifi(void)
         !connected;
         ++ index
     ) {
-        if (index > CONFIG_ESP_WIFI_POINTS_NUMBER)
+        if (index >= CONFIG_ESP_WIFI_POINTS_NUMBER)
             index = 0;
         
         wifi_config_t wifi_config = {
             .sta = wifi_points[index]
         };
-        ESP_LOGI(TAG, "Trying to connect to SSID: %s, Password: %s (index: %d)",
+        ESP_LOGI(TAG, "Trying to connect to SSID: %s, Password: %s (index: %d) ",
                  wifi_points[index].ssid, wifi_points[index].password, index);
 
         ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
@@ -94,15 +94,15 @@ static esp_err_t find_wifi(void)
                                                portMAX_DELAY);
 
         if (bits & WIFI_CONNECTED_BIT) {
-            ESP_LOGI(TAG, "Successfully connected to SSID: %s", wifi_points[index].ssid);
+            ESP_LOGI(TAG, "Successfully connected to SSID: %s ", wifi_points[index].ssid);
             connected = 1;
             err = ESP_OK;
         }
         else if (bits & WIFI_FAIL_BIT) {
-            ESP_LOGW(TAG, "Failed to connect to SSID: %s", wifi_points[index].ssid);
+            ESP_LOGW(TAG, "Failed to connect to SSID: %s ", wifi_points[index].ssid);
             led_blink(1, 2);
         } else
-            ESP_LOGE(TAG, "Unexpected event during Wi-Fi connection.");
+            ESP_LOGE(TAG, "Unexpected event during Wi-Fi connection. ");
 
         if (!connected)
             ESP_ERROR_CHECK(esp_wifi_stop());

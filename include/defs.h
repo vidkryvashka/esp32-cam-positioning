@@ -35,5 +35,7 @@ esp_err_t init_esp_things(void);
  */
 void led_blink(float periods, uint8_t count);
 
+void log_memory();
+
 
 #endif
