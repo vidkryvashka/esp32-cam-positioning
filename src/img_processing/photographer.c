@@ -5,6 +5,7 @@
 
 #include "img_processing/photographer.h"
 #include "img_processing/operating_with_fb.h"
+#include "img_processing/recognizer.h"
 
 #ifndef TAG
 #define TAG "my_photographer"
@@ -34,6 +35,14 @@ camera_fb_t * write_fragment(rectangle_coords_t rect_coords) {
         .x = rect_coords.top_left.x + rect_coords.width / 2,
         .y = rect_coords.top_left.y + rect_coords.height / 2
     };
+
+    // float similarity = 0;
+    // pixel_coordinate_t similar_coord = {0, 0};
+    // find_fragment(current_frame, fragment, &similarity, &similar_coord);
+    // ESP_LOGI(TAG, "find_fragment found similarity %.2f ", similarity);
+
+    // // crashes
+
     pause_photographer = 0;
     ESP_LOGI(TAG, "Unpause");
 
@@ -71,8 +80,14 @@ static void photographer_task(void *pvParameters)
         if (!pause_photographer) {
             if (take_photo())
                 ESP_LOGE(TAG, "couldn't take_photo ");
-        } else
+        } else {
             ESP_LOGI(TAG, "photographer_task paused");
+            while (1) {
+                if (!pause_photographer)
+                    break;
+                vTaskDelay(pdMS_TO_TICKS(100));
+            }
+        }
         vTaskDelay(pdMS_TO_TICKS(PHOTOGRAPHER_DELAY_MS));
         if (!(esp_random() % 3))
             log_memory();

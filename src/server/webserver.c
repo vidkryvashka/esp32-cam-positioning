@@ -187,6 +187,7 @@ static httpd_uri_t uri_set_rect = {
 static httpd_handle_t setup_server(void)
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+    // config.stack_size = 4096; // by default, to know
     httpd_handle_t server = NULL;
 
     if (httpd_start(&server, &config) == ESP_OK) {
