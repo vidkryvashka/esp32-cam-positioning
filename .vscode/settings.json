@@ -34,7 +34,9 @@
         "img_processing.h": "c",
         "mdns.h": "c",
         "follow_obj_in_img.h": "c",
-        "photographer.h": "c"
+        "photographer.h": "c",
+        "recognizer.h": "c",
+        "operating_with_fb.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

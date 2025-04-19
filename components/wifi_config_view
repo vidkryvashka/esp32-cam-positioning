@@ -1,0 +1,43 @@
+(Top) → Component config → Wi-Fi                        Espressif IoT Development Framework Configuration
+(10) Max number of WiFi static RX buffers
+(32) Max number of WiFi dynamic RX buffers
+    Type of WiFi TX buffers (Static)  --->
+(16) Max number of WiFi static TX buffers
+(32) Max number of WiFi cache TX buffers
+    Type of WiFi RX MGMT buffers (Static)  --->
+(5) Max number of WiFi RX MGMT buffers
+[ ] WiFi CSI(Channel State Information)
+[*] WiFi AMPDU TX
+(6)     WiFi AMPDU TX BA window size
+[*] WiFi AMPDU RX
+(6)     WiFi AMPDU RX BA window size
+[ ] WiFi AMSDU TX
+[*] WiFi NVS flash
+    WiFi Task Core ID (Core 0)  --->
+(752) Max length of WiFi SoftAP Beacon
+(32) WiFi mgmt short buffer number
+[*] WiFi IRAM speed optimization
+[ ] WiFi EXTRA IRAM speed optimization
+[*] WiFi RX IRAM speed optimization
+[ ] Enable WPA3-Personal
+[ ] Enable OWE STA
+[ ] WiFi SLP IRAM speed optimization
+(50) Minimum active time
+(10) Maximum keep alive time
+(15) Minimum wait broadcast data time
+[*] Power Management for station at disconnected
+[ ] WiFi GMAC Support(GMAC128 and GMAC256)
+[ ] WiFi SoftAP Support
+[ ] Wifi sleep optimize when beacon lost
+(7) Maximum espnow encrypt peers number
+[ ] WiFi Aware
+[ ] Use MbedTLS crypto APIs
+[ ] Enable WAPI PSK support
+[ ] Enable 802.11k, 802.11v APIs Support
+[ ] Enable Multi Band Operation Certification Support
+[ ] Enable DPP support
+[ ] Enable 802.11R (Fast Transition) Support
+    WPS Configuration Options  --->
+[ ] Print debug messages from WPA Supplicant
+[ ] Add DPP testing code
+[ ] Enable enterprise option

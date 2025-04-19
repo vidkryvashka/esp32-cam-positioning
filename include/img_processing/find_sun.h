@@ -1,5 +1,5 @@
-#ifndef FOLLOW_OBJ_IN_IMG_H
-#define FOLLOW_OBJ_IN_IMG_H
+#ifndef FIND_SUN_H
+#define FIND_SUN_H
 
 #include "img_processing/camera.h"
 

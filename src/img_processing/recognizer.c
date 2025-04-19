@@ -113,8 +113,8 @@ static void detect_fast_corners(
             uint16_t count = 0;
             // Check 9 contiguous pixels brighter or darker
             for (int i = 0; i < 16; ++i) {
-                uint16_t px = x + offsets[i][0];
-                uint16_t py = y + offsets[i][1];
+                int16_t px = x + offsets[i][0];
+                int16_t py = y + offsets[i][1];
                 // Explicit bounds checking
                 if (px < 0 || px >= (uint16_t)img->width || py < 0 || py >= (uint16_t)img->height) {
                     count = 0;
@@ -326,18 +326,18 @@ esp_err_t find_fragment(
 
 
 
-static void example_to_use()
-{
-    camera_fb_t *current_frame; // Initialize with 96x96 RGB565 data
-    camera_fb_t *fragment;      // Initialize with smaller RGB565 data
-    float similarity;
-    pixel_coordinate_t top_left;    
-
-    int result = find_fragment(current_frame, fragment, &similarity, &top_left);
-    if (result == 0) {
-        printf("Similarity: %.2f%%\n", similarity);
-        printf("Top-left: (%d, %d)\n", top_left.x, top_left.y);
-    } else {
-        printf("Fragment not found\n");
-    }
-}
+// static void example_to_use()
+// {
+//     camera_fb_t *current_frame; // Initialize with 96x96 RGB565 data
+//     camera_fb_t *fragment;      // Initialize with smaller RGB565 data
+//     float similarity;
+//     pixel_coordinate_t top_left;    
+// 
+//     int result = find_fragment(current_frame, fragment, &similarity, &top_left);
+//     if (result == 0) {
+//         printf("Similarity: %.2f%%\n", similarity);
+//         printf("Top-left: (%d, %d)\n", top_left.x, top_left.y);
+//     } else {
+//         printf("Fragment not found\n");
+//     }
+// }

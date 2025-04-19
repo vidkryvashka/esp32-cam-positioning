@@ -84,149 +84,139 @@
   </div>
 </body>
 <script>
-  let intervalId = null;
-  let interval = 1000;
-  let isRectMode = false;
-  let startX, startY, endX, endY;
-  const canvas = document.getElementById('overlay');
-  const ctx = canvas.getContext('2d');
+let isRectMode = false;
+let startX, startY, endX, endY;
+const canvas = document.getElementById('overlay');
+const ctx = canvas.getContext('2d');
+let ws = null;
 
-  function updateImage() {
-    let promise = fetch('/camera');
-    console.log("fetch camera req");
-    promise.then(response => {
-      const sunData = response.headers.get('sun-coords');
-      return response.blob().then(blob => {
-        const img = document.getElementById('camera-feed');
-        img.src = URL.createObjectURL(blob);
-        if (sunData) {
-          try {
-            const parsedSunData = JSON.parse(sunData);
-            if (parsedSunData && parsedSunData.coords) {
-              console.log('Sun positions:', parsedSunData);
-              drawSunPositions(parsedSunData);
-            }
-          } catch (e) {
-            console.error('Error parsing sun-coords:', e);
-          }
+function connectWebSocket() {
+  ws = new WebSocket(`ws://${window.location.hostname}/ws`);
+  ws.onopen = () => {
+    console.log('WebSocket connected');
+  };
+  ws.onmessage = (event) => {
+    if (typeof event.data === 'string') {
+      try {
+        const sunData = JSON.parse(event.data);
+        if (sunData && sunData.coords) {
+          console.log('Sun positions:', sunData);
+          drawSunPositions(sunData);
         }
-      });
-    }).catch(error => console.error('Error:', error));
-  }
-
-  function drawSunPositions(sunData) {
-    if (!sunData || !sunData.coords || !Array.isArray(sunData.coords)) {
-      console.warn('Invalid or missing sunData.coords');
-      return;
-    }
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = 'red';
-    sunData.coords.forEach(coord => {
-      if (coord && typeof coord.x === 'number' && typeof coord.y === 'number') {
-        ctx.beginPath();
-        ctx.arc(coord.x * 5, coord.y * 5, 3, 0, 2 * Math.PI);
-        ctx.fill();
+      } catch (e) {
+        console.error('Error parsing sun-coords:', e);
       }
-    });
-    ctx.fillStyle = 'purple';
-    if (sunData.center && typeof sunData.center.x === 'number' && typeof sunData.center.y === 'number') {
+    } else if (event.data instanceof Blob) {
+      const img = document.getElementById('camera-feed');
+      img.src = URL.createObjectURL(event.data);
+    }
+  };
+  ws.onclose = () => {
+    console.log('WebSocket disconnected, reconnecting...');
+    setTimeout(connectWebSocket, 1000);
+  };
+  ws.onerror = (error) => {
+    console.error('WebSocket error:', error);
+  };
+}
+
+function drawSunPositions(sunData) {
+  if (!sunData || !sunData.coords || !Array.isArray(sunData.coords)) {
+    console.warn('Invalid or missing sunData.coords');
+    return;
+  }
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = 'red';
+  sunData.coords.forEach(coord => {
+    if (coord && typeof coord.x === 'number' && typeof coord.y === 'number') {
       ctx.beginPath();
-      ctx.arc(sunData.center.x * 5, sunData.center.y * 5, 5, 0, 2 * Math.PI);
+      ctx.arc(coord.x * 5, coord.y * 5, 3, 0, 2 * Math.PI);
       ctx.fill();
     }
-  }
-
-  function startImageUpdate() {
-    if (!intervalId) {
-      intervalId = setInterval(updateImage, interval);
-    }
-  }
-
-  function stopImageUpdate() {
-    if (intervalId) {
-      clearInterval(intervalId);
-      intervalId = null;
-    }
-  }
-
-  function drawRectangle(x1, y1, x2, y2) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = 'yellow';
-    ctx.lineWidth = 2;
+  });
+  ctx.fillStyle = 'purple';
+  if (sunData.center && typeof sunData.center.x === 'number' && typeof sunData.center.y === 'number') {
     ctx.beginPath();
-    ctx.rect(x1, y1, x2 - x1, y2 - y1);
-    ctx.stroke();
+    ctx.arc(sunData.center.x * 5, sunData.center.y * 5, 5, 0, 2 * Math.PI);
+    ctx.fill();
   }
+}
 
-  function sendRectangleCoords(topLeftX, topLeftY, width, height) {
-    const data = {
-      topLeftX: Math.round(topLeftX),
-      topLeftY: Math.round(topLeftY),
-      width: Math.round(width),
-      height: Math.round(height)
-    };
-    fetch('/set-rect', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(data)
-    })
-    .then(response => response.text())
-    .then(text => console.log('Server response:', text))
-    .catch(error => console.error('Error sending coords:', error));
+function drawRectangle(x1, y1, x2, y2) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = 'yellow';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.rect(x1, y1, x2 - x1, y2 - y1);
+  ctx.stroke();
+}
+
+function sendRectangleCoords(topLeftX, topLeftY, width, height) {
+  const data = {
+    topLeftX: Math.round(topLeftX),
+    topLeftY: Math.round(topLeftY),
+    width: Math.round(width),
+    height: Math.round(height)
+  };
+  fetch('/set-rect', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data)
+  })
+  .then(response => response.text())
+  .then(text => console.log('Server response:', text))
+  .catch(error => console.error('Error sending coords:', error));
+}
+
+canvas.addEventListener('mousedown', (e) => {
+  if (!isRectMode) return;
+  const rect = canvas.getBoundingClientRect();
+  startX = e.clientX - rect.left;
+  startY = e.clientY - rect.top;
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  if (!isRectMode || startX === undefined) return;
+  const rect = canvas.getBoundingClientRect();
+  endX = e.clientX - rect.left;
+  endY = e.clientY - rect.top;
+  drawRectangle(startX, startY, endX, endY);
+});
+
+canvas.addEventListener('mouseup', (e) => {
+  if (!isRectMode || startX === undefined) return;
+  const rect = canvas.getBoundingClientRect();
+  endX = e.clientX - rect.left;
+  endY = e.clientY - rect.top;
+
+  const topLeftX = Math.min(startX, endX) / 5;
+  const topLeftY = Math.min(startY, endY) / 5;
+  const bottomRightX = Math.max(startX, endX) / 5;
+  const bottomRightY = Math.max(startY, endY) / 5;
+  const width = bottomRightX - topLeftX;
+  const height = bottomRightY - topLeftY;
+
+  sendRectangleCoords(topLeftX, topLeftY, width, height);
+
+  isRectMode = false;
+  document.getElementById('toggle-rect-mode').textContent = 'Select Rectangle';
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  startX = startY = endX = endY = undefined;
+});
+
+document.getElementById('toggle-rect-mode').addEventListener('click', () => {
+  isRectMode = !isRectMode;
+  document.getElementById('toggle-rect-mode').textContent = isRectMode ? 'Selecting...' : 'Select Rectangle';
+  if (isRectMode) {
+    fetch('/pause')
+      .then(response => response.text())
+      .then(text => console.log('Photographer paused:', text))
+      .catch(error => console.error('Error pausing:', error));
   }
+});
 
-  canvas.addEventListener('mousedown', (e) => {
-    if (!isRectMode) return;
-    
-    const rect = canvas.getBoundingClientRect();
-    startX = e.clientX - rect.left;
-    startY = e.clientY - rect.top;
-  });
-
-  canvas.addEventListener('mousemove', (e) => {
-    if (!isRectMode || startX === undefined) return;
-    const rect = canvas.getBoundingClientRect();
-    endX = e.clientX - rect.left;
-    endY = e.clientY - rect.top;
-    drawRectangle(startX, startY, endX, endY);
-  });
-
-  canvas.addEventListener('mouseup', (e) => {
-    if (!isRectMode || startX === undefined) return;
-    const rect = canvas.getBoundingClientRect();
-    endX = e.clientX - rect.left;
-    endY = e.clientY - rect.top;
-
-    const topLeftX = Math.min(startX, endX) / 5;
-    const topLeftY = Math.min(startY, endY) / 5;
-    const bottomRightX = Math.max(startX, endX) / 5;
-    const bottomRightY = Math.max(startY, endY) / 5;
-    const width = bottomRightX - topLeftX;
-    const height = bottomRightY - topLeftY;
-
-    sendRectangleCoords(topLeftX, topLeftY, width, height);
-
-    isRectMode = false;
-    document.getElementById('toggle-rect-mode').textContent = 'Select Rectangle';
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    startImageUpdate();
-    startX = startY = endX = endY = undefined;
-  });
-
-  document.getElementById('toggle-rect-mode').addEventListener('click', () => {
-    if (!isRectMode) {
-      isRectMode = true;
-      document.getElementById('toggle-rect-mode').textContent = 'Selecting...';
-      stopImageUpdate();
-      fetch('/pause')
-        .then(response => response.text())
-        .then(text => console.log('Server paused:', text))
-        .catch(error => console.error('Error pausing:', error));
-    }
-  });
-
-  startImageUpdate();
+connectWebSocket();
 </script>
 </html>

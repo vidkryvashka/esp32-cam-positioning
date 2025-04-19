@@ -5,7 +5,7 @@
 
 #include "img_processing/photographer.h"
 #include "img_processing/operating_with_fb.h"
-#include "img_processing/recognizer.h"
+// #include "img_processing/recognizer.h"
 
 #ifndef TAG
 #define TAG "my_photographer"
@@ -13,6 +13,8 @@
 
 
 volatile bool pause_photographer = 0;   // extern declared in img_processing/photographer.h, used in webserver.c
+volatile SemaphoreHandle_t frame_mutex;
+camera_fb_t *current_frame = NULL;      // extern declared in camera.h
 
 
 // for prediction, Kalman filter, not implemented yet
@@ -25,7 +27,8 @@ static pixel_coordinate_t coords_history[MAX_COORDS_AMOUNT] = {
 
 static camera_fb_t *fragment = NULL; 
 
-camera_fb_t * write_fragment(rectangle_coords_t rect_coords) {
+camera_fb_t * write_fragment(rectangle_coords_t rect_coords)
+{
     ESP_LOGI(TAG, "Rectangle coordinates: top teft: %d %d, width: %d, height: %d)",
              rect_coords.top_left.x, rect_coords.top_left.y, rect_coords.width, rect_coords.height);
     if (fragment != NULL)
@@ -50,8 +53,6 @@ camera_fb_t * write_fragment(rectangle_coords_t rect_coords) {
 }
 
 
-volatile SemaphoreHandle_t frame_mutex;
-camera_fb_t *current_frame = NULL;
 // static int dt = 0;   // for prediction
 
 
@@ -82,11 +83,8 @@ static void photographer_task(void *pvParameters)
                 ESP_LOGE(TAG, "couldn't take_photo ");
         } else {
             ESP_LOGI(TAG, "photographer_task paused");
-            while (1) {
-                if (!pause_photographer)
-                    break;
+            while (pause_photographer)
                 vTaskDelay(pdMS_TO_TICKS(100));
-            }
         }
         vTaskDelay(pdMS_TO_TICKS(PHOTOGRAPHER_DELAY_MS));
         if (!(esp_random() % 3))
