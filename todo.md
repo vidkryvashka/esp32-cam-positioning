@@ -1,11 +1,13 @@
 # todo
 
+* take frame, current_frame mutexes race conditions dead loop не працює photographer після виділення rectangle
+
+* серво живуть своїм життям
+
+
 * зробити визначення переміщення об'єкта порівнянням зображень
 
 
-
-
-* влаштувати живлення від батарейки
 
 
 
@@ -15,14 +17,12 @@
 
 * зробити компресію стрічок з frontend/index_src.html
 
-* оптимізувати розміра. вайфай займає 548 кб – половину флеша
-
-* рандомізувати найяскравіші точки для знаходження центру між ними для уникнення так званих резонацій, хотя може й не надо, красіво
-
+* влаштувати живлення від батарейки
 
 
 ## fanfacts
-* дисторсія
+* дисторсія (від лат. distorsio, distortio — викривлення) — аберація оптичних систем, при якій лінійне збільшення змінюється по полю зору, порушуючи подібність між об'єктом та його зображенням.
 
 
 ## done to commit -m
+"huge messy refactor, uncomplited update. Added, linked my_vector, updated all.. uncompleted fast9, servos (looks like bad motors potentiometers)"

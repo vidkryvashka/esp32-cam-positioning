@@ -4,8 +4,7 @@
 #include "esp_random.h"
 
 #include "img_processing/photographer.h"
-#include "img_processing/operating_with_fb.h"
-// #include "img_processing/recognizer.h"
+#include "img_processing/ORB_defs.h"
 
 #ifndef TAG
 #define TAG "my_photographer"
@@ -19,41 +18,44 @@ camera_fb_t *current_frame = NULL;      // extern declared in camera.h
 
 // for prediction, Kalman filter, not implemented yet
 #define MAX_COORDS_AMOUNT 3
-uint8_t coords_amount = 0;
-static pixel_coordinate_t coords_history[MAX_COORDS_AMOUNT] = {
-    {0, 0}, {0, 0}, {0, 0}
-};
+// uint8_t coords_amount = 0;
+// static pixel_coord_t coords_history[MAX_COORDS_AMOUNT] = {
+//     {0, 0}, {0, 0}, {0, 0}
+// };
 
 
 static camera_fb_t *fragment = NULL; 
 
-camera_fb_t * write_fragment(rectangle_coords_t rect_coords)
-{
-    ESP_LOGI(TAG, "Rectangle coordinates: top teft: %d %d, width: %d, height: %d)",
-             rect_coords.top_left.x, rect_coords.top_left.y, rect_coords.width, rect_coords.height);
+camera_fb_t* get_fragment(
+    const rectangle_coords_t *rect_coords
+) {
+    ESP_LOGI(TAG, "Rectangle coordinates: Top left: (%d, %d), width: %d, height: %d)", 
+            rect_coords->top_left.x, rect_coords->top_left.y, rect_coords->width, rect_coords->height);
+    
     if (fragment != NULL)
         camera_fb_free(fragment);
-    fragment = camera_fb_crop(current_frame, &rect_coords);
-    coords_history[coords_amount] = (pixel_coordinate_t) {
-        .x = rect_coords.top_left.x + rect_coords.width / 2,
-        .y = rect_coords.top_left.y + rect_coords.height / 2
-    };
+    
+    fragment = camera_fb_create(rect_coords->width, rect_coords->height, current_frame->format);
+    camera_fb_crop(fragment, current_frame, rect_coords);
+    // coords_history[coords_amount] = (pixel_coord_t) {
+    //     .x = rect_coords->top_left.x + rect_coords->width / 2,
+    //     .y = rect_coords->top_left.y + rect_coords->height / 2
+    // };
 
     // float similarity = 0;
-    // pixel_coordinate_t similar_coord = {0, 0};
+    // pixel_coord_t similar_coord = {0, 0};
     // find_fragment(current_frame, fragment, &similarity, &similar_coord);
+
     // ESP_LOGI(TAG, "find_fragment found similarity %.2f ", similarity);
 
-    // // crashes
+    // // crashes due to memory usage
 
     pause_photographer = 0;
-    ESP_LOGI(TAG, "Unpause");
+    ESP_LOGI(TAG, "Unpaused");
 
     return fragment;
 }
 
-
-// static int dt = 0;   // for prediction
 
 
 static esp_err_t take_photo()
@@ -67,7 +69,7 @@ static esp_err_t take_photo()
     }
     current_frame = esp_camera_fb_get();
     xSemaphoreGive(frame_mutex);
-    ESP_LOGI(TAG, "took photo%s", current_frame != NULL ? ", got fb, nice" : ", fail");
+    ESP_LOGI(TAG, "take_photo%s", current_frame != NULL ? ", got fb" : ", fail");
     if (!current_frame)
         return ESP_FAIL;
     
@@ -82,12 +84,13 @@ static void photographer_task(void *pvParameters)
             if (take_photo())
                 ESP_LOGE(TAG, "couldn't take_photo ");
         } else {
-            ESP_LOGI(TAG, "photographer_task paused");
+            ESP_LOGI(TAG, "photographer_task paused ");
             while (pause_photographer)
                 vTaskDelay(pdMS_TO_TICKS(100));
         }
         vTaskDelay(pdMS_TO_TICKS(PHOTOGRAPHER_DELAY_MS));
-        if (!(esp_random() % 3))
+
+        if (!(esp_random() % MEMORY_LOG_PROBABILITY_DIVIDER))
             log_memory();
     }
 }

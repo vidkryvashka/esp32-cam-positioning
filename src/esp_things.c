@@ -3,6 +3,7 @@
 
 
 #include "nvs_flash.h"
+#include "my_servos.h"
 
 
 #include "defs.h"
@@ -20,6 +21,9 @@
 #define LED_PIN 33
 #define BLINK_PERIOD pdMS_TO_TICKS(150)
 
+// idk why on is 0 and off is 1
+#define LED_ON()    gpio_set_level(LED_PIN, 0)
+#define LED_OFF()   gpio_set_level(LED_PIN, 1)
 
 
 static esp_err_t init_gpio(void)
@@ -35,10 +39,13 @@ static esp_err_t init_gpio(void)
 
 
 esp_err_t init_esp_things(void)
-{   
-    // esp_err_t err = ESP_FAIL;
+{
     esp_err_t gpio_err = init_gpio();
     ESP_ERROR_CHECK(gpio_err);
+
+    esp_err_t servos_err = init_my_servos();
+    ESP_ERROR_CHECK(servos_err);
+    // defer deinit_my_servos();
 
     // Initialize NVS
     esp_err_t nvs_flash_err = nvs_flash_init();
@@ -57,7 +64,7 @@ esp_err_t init_esp_things(void)
 
 void led_blink(float periods, uint8_t count)
 {
-    for (uint8_t def_i = 0; def_i < count; ++ def_i) {
+    for (uint8_t def_i = 0; def_i < count; ++def_i) {
         LED_ON();
         vTaskDelay(BLINK_PERIOD * periods);
         LED_OFF();

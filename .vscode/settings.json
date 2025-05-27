@@ -36,7 +36,9 @@
         "follow_obj_in_img.h": "c",
         "photographer.h": "c",
         "recognizer.h": "c",
-        "operating_with_fb.h": "c"
+        "operating_with_fb.h": "c",
+        "servos.h": "c",
+        "orb_defs.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

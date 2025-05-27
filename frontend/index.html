@@ -77,16 +77,24 @@
       <p class="card-title">Camera Stream</p>
       <div style="position: relative;">
         <img id="camera-feed" src="">
-        <canvas id="overlay" width="480" height="480"></canvas>
+        <!-- <canvas id="overlay" width="480" height="480"></canvas> -->
+        <canvas id="overlay"></canvas>
       </div>
       <button id="toggle-rect-mode">Select Rectangle</button>
     </div>
   </div>
 </body>
 <script>
+let iamgeWidth = 240;
+let imageHeight = 240;
+let canvasWidth = 480;
+let canvasHeight = 480;
+const coeff = imageHeight / canvasHeight;
 let isRectMode = false;
 let startX, startY, endX, endY;
 const canvas = document.getElementById('overlay');
+canvas.width = canvasWidth;
+canvas.height = canvasHeight;
 const ctx = canvas.getContext('2d');
 let ws = null;
 
@@ -98,13 +106,20 @@ function connectWebSocket() {
   ws.onmessage = (event) => {
     if (typeof event.data === 'string') {
       try {
-        const sunData = JSON.parse(event.data);
-        if (sunData && sunData.coords) {
-          console.log('Sun positions:', sunData);
-          drawSunPositions(sunData);
+        const metadata = JSON.parse(event.data);
+        if (metadata.type == "sun-coords") {
+          const sunData = metadata;
+          if (sunData && sunData.coords) {
+            console.log('Sun positions:', sunData);
+            drawSunPositions(sunData);
+          }
+        } else if (metadata.data == "image_info") {
+          console.log("got image info ", metadata.width, metadata.height);
+          iamgeWidth = metadata.width;
+          imageHeight = metadata.height;
         }
       } catch (e) {
-        console.error('Error parsing sun-coords:', e);
+        console.error('Error parsing json:', e);
       }
     } else if (event.data instanceof Blob) {
       const img = document.getElementById('camera-feed');
@@ -130,14 +145,14 @@ function drawSunPositions(sunData) {
   sunData.coords.forEach(coord => {
     if (coord && typeof coord.x === 'number' && typeof coord.y === 'number') {
       ctx.beginPath();
-      ctx.arc(coord.x * 5, coord.y * 5, 3, 0, 2 * Math.PI);
+      ctx.arc(coord.x / coeff, coord.y / coeff, 3, 0, 2 * Math.PI);
       ctx.fill();
     }
   });
   ctx.fillStyle = 'purple';
   if (sunData.center && typeof sunData.center.x === 'number' && typeof sunData.center.y === 'number') {
     ctx.beginPath();
-    ctx.arc(sunData.center.x * 5, sunData.center.y * 5, 5, 0, 2 * Math.PI);
+    ctx.arc(sunData.center.x / coeff, sunData.center.y / coeff, 5, 0, 2 * Math.PI);
     ctx.fill();
   }
 }
@@ -191,10 +206,10 @@ canvas.addEventListener('mouseup', (e) => {
   endX = e.clientX - rect.left;
   endY = e.clientY - rect.top;
 
-  const topLeftX = Math.min(startX, endX) / 5;
-  const topLeftY = Math.min(startY, endY) / 5;
-  const bottomRightX = Math.max(startX, endX) / 5;
-  const bottomRightY = Math.max(startY, endY) / 5;
+  const topLeftX = Math.min(startX, endX) * coeff;
+  const topLeftY = Math.min(startY, endY) * coeff;
+  const bottomRightX = Math.max(startX, endX) * coeff;
+  const bottomRightY = Math.max(startY, endY) * coeff;
   const width = bottomRightX - topLeftX;
   const height = bottomRightY - topLeftY;
 

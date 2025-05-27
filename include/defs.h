@@ -14,10 +14,6 @@
 
 #define BOARD "esp32"
 
-// idk why on is 0 and off is 1
-#define LED_ON()    gpio_set_level(LED_PIN, 0)
-#define LED_OFF()   gpio_set_level(LED_PIN, 1)
-
 
 /** 
  * @brief inits gpio, nvs_flash
@@ -26,6 +22,7 @@ esp_err_t init_esp_things(void);
 
 #define DEFS_MARK_SUN 0
 
+#define MEMORY_LOG_PROBABILITY_DIVIDER 7
 
 /**
  * @brief Blinks with led. Led pin defined as LED_PIN

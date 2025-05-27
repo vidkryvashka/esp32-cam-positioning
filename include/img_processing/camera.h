@@ -25,7 +25,11 @@
 
 #if ESP_CAMERA_SUPPORTED
 
-#define FRAME_WIDTH_AND_HEIGHT 96   // in camera.c static camera_config_t camera_config .frame_size = FRAMESIZE_96X96
+
+extern uint16_t frame_width;
+extern uint16_t frame_height;
+
+// #define FRAME_WIDTH_AND_HEIGHT 96   // in camera.c static camera_config_t camera_config .frame_size = FRAMESIZE_96X96
 
 esp_err_t init_camera(void);
 
@@ -38,15 +42,15 @@ extern camera_fb_t *current_frame;  // initiated in photographer.c, used in take
  * @brief holds small coords uint8_t
  */
 typedef struct {
-    uint8_t x;
-    uint8_t y;
-} pixel_coordinate_t;
+    uint16_t x;
+    uint16_t y;
+} pixel_coord_t;
 
 
 typedef struct {
-    pixel_coordinate_t top_left;
-    uint8_t width;
-    uint8_t height;
+    pixel_coord_t top_left;
+    uint16_t width;
+    uint16_t height;
 } rectangle_coords_t;
 
 
@@ -58,8 +62,25 @@ typedef struct {
  * @return errors
  */
 esp_err_t get_FOVs(
-    const pixel_coordinate_t *sun_coord,
-    float *FOVs /* with size 2 */
+    const pixel_coord_t *sun_coord,
+    float FOVs[2]
+);
+
+
+
+camera_fb_t* camera_fb_create(size_t width, size_t height, pixformat_t format);
+
+
+camera_fb_t* camera_fb_copy(const camera_fb_t* src);
+
+
+void camera_fb_free(camera_fb_t* fb);
+
+
+esp_err_t camera_fb_crop(
+    camera_fb_t *dest,
+    const camera_fb_t *src,
+    const rectangle_coords_t *rect
 );
 
 

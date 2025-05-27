@@ -15,7 +15,9 @@ extern volatile bool pause_photographer; // initiated in photographer.c, used in
  * @param rect_coords 
  * @return camera_fb_t* pointer to fragment
  */
-camera_fb_t * write_fragment(rectangle_coords_t rect_coords);
+camera_fb_t* get_fragment(
+    const rectangle_coords_t *rect_coords
+);
 
 esp_err_t run_photographer();
 

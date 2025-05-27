@@ -18,7 +18,6 @@
 #define TAG "my_camera"
 #endif
 
-// ESP32Cam (AiThinker) PIN Map
 #ifdef BOARD_ESP32CAM_AITHINKER
 
 #define CAM_PIN_PWDN 32
@@ -40,6 +39,7 @@
 #define CAM_PIN_PCLK 22
 
 #endif
+
 
 static camera_config_t camera_config = {
     .pin_pwdn = CAM_PIN_PWDN,
@@ -66,19 +66,23 @@ static camera_config_t camera_config = {
     .ledc_channel = LEDC_CHANNEL_0,
 
     .pixel_format = PIXFORMAT_RGB565, //YUV422,GRAYSCALE,RGB565,JPEG
-    .frame_size = FRAMESIZE_96X96, // changing that // For ESP32, do not use sizes above QVGA when not JPEG. The performance of the ESP32-S series has improved a lot, but JPEG mode always gives better frame rates.
 
-    .jpeg_quality = 12, //0-63, for OV series camera sensors, lower number means higher quality
-    .fb_count = 1,      //When jpeg mode is used, if fb_count more than one, the driver will work in continuous mode.
-    .grab_mode = CAMERA_GRAB_WHEN_EMPTY,
+    // For ESP32, do not use sizes above QVGA when not JPEG. The performance of the ESP32-S series has improved a lot, but JPEG mode always gives better frame rates.
+    /** considering cases
+     * FRAMESIZE_96X96
+     * FRAMESIZE_240X240
+     * FRAMESIZE_QVGA   // 320x240
+     * FRAMESIZE_320X320    // crashing
+     */
+    .frame_size = FRAMESIZE_240X240,
+
+    .jpeg_quality = 12, // 0-63, for OV series camera sensors, lower number means higher quality
+    .fb_count = 1,      // When jpeg mode is used, if fb_count more than one, the driver will work in continuous mode.
+    .grab_mode = CAMERA_GRAB_WHEN_EMPTY
 };
 
-/**
- * @brief distance from camera to focus in pixels related to frame size and camera FOV (I measured 56 degrees in horizontal)
- * should be calculated in esp_err_t init_camera(void);
- * used in get_FOVs
- */
-uint16_t pixels_focus = 0;   // extern declared in camera.h, used in find_sun.c
+uint16_t frame_width;
+uint16_t frame_height;
 
 esp_err_t init_camera(void)
 {
@@ -89,9 +93,28 @@ esp_err_t init_camera(void)
         return err;
     }
 
-    const float tan26_degrees = 0.4877f;
+    switch (camera_config.frame_size) {
+        case FRAMESIZE_96X96:
+            frame_width = frame_height = 96;
+            break;
+        case FRAMESIZE_240X240:
+            frame_width = frame_height = 240;
+            break;
 
-    pixels_focus = (uint16_t)((float)FRAME_WIDTH_AND_HEIGHT / (float)2 / tan26_degrees);
+        case FRAMESIZE_QVGA:
+            frame_width = 320;
+            frame_height = 240;
+            break;
+        
+        case FRAMESIZE_320X320:
+            frame_width = frame_height= 320;
+            break;
+        
+        default:
+            ESP_LOGE(TAG, "init_camera unpredicted framesize");
+            return ESP_FAIL;
+            break;
+    }
 
     return ESP_OK;
 }
@@ -131,28 +154,26 @@ esp_err_t init_camera(void)
 
 
 esp_err_t get_FOVs(
-    const pixel_coordinate_t *coord,
-    float *FOVs /* with size 2 */
+    const pixel_coord_t *coord,
+    float FOVs[2]
 ) {
-    if (coord->x >= FRAME_WIDTH_AND_HEIGHT || coord->y >= FRAME_WIDTH_AND_HEIGHT) {
+    if (coord->x >= frame_width || coord->y >= frame_height) {
         ESP_LOGE(TAG, "get_FOVs got strange coord");
         return ESP_FAIL;
     }
 
-    int8_t diff_x = FRAME_WIDTH_AND_HEIGHT/2 - coord->x;
-    int8_t diff_y = FRAME_WIDTH_AND_HEIGHT/2 - coord->y;
+    int16_t diff_x = frame_width /2 - coord->x;
+    int16_t diff_y = frame_height / 2 - coord->y;
 
-    FOVs[0] = atanf((float)diff_x / (float)pixels_focus) * (float)90 / M_PI_2;
-    FOVs[1] = atanf((float)diff_y / (float)pixels_focus) * (float)90 / M_PI_2;
+    const float tan26_degrees = 0.4877f;
+
+    FOVs[0] = atanf((float)diff_x / (float)frame_width / (float)2 / tan26_degrees) * (float)90 / M_PI_2;
+    FOVs[1] = atanf((float)diff_y / (float)frame_height / (float)2 / tan26_degrees) * (float)90 / M_PI_2;
 
     ESP_LOGI("", "FOVs x: %.2f y: %.2f", FOVs[0], FOVs[1]);
 
     return ESP_OK;
 }
-
-
-
-
 
 
 
