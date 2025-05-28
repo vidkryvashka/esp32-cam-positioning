@@ -5,7 +5,7 @@
 #include "my_vector.h"
 #include "img_processing/camera.h"
 
-#define THRESHOLD 80
+#define THRESHOLD 100
 #define BRIEF_SIZE 256
 #define PATCH_SIZE 31
 #define SIGMA 5
@@ -36,22 +36,34 @@ typedef struct {
  * @param img1  gray single channel image buffer
  * @param w     width
  * @param h     height
+ * @param keypoints global messy variable to send it to web page
  * @return vector_t* pixel_coord_t keypoints
  */
-vector_t* fast9(
+esp_err_t fast9(
     const uint8_t *img1,
     const uint16_t w,
-    const uint16_t h
+    const uint16_t h,
+    vector_t *keypoints
 );
 
 
 // void operate(int argc, char **argv);
 
-esp_err_t find_fragment(
+
+/**
+ * @brief 
+ * 
+ * @param frame big one
+ * @param fragment consider smaller image
+ * @param top_left forgot why
+ * @param keypoints global messy variable to send it to web page
+ * @return similarity: [0, 100] % posibility measurement fragment is in frame, < 0 if some errors, not implemented
+ */
+int8_t find_fragment(
     camera_fb_t *frame,
     camera_fb_t *fragment,
-    float *similarity,
-    pixel_coord_t *top_left
+    rectangle_coords_t *rect,
+    vector_t *keypoints
 );
 
 #endif

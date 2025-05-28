@@ -1,11 +1,11 @@
 #include <stdlib.h>
-#include <esp_http_server.h>
+#include <string.h>
 #include <esp_log.h>
+#include <sys/time.h>
 #include <nvs_flash.h>
 #include <esp_netif.h>
 #include <driver/gpio.h>
-#include <string.h>
-#include <sys/time.h>
+#include <esp_http_server.h>
 
 #include "defs.h"
 #include "my_vector.h"
@@ -31,37 +31,56 @@ static uint16_t sending_period = PHOTOGRAPHER_DELAY_MS; // 1000;  // ms
 static httpd_handle_t server = NULL;
 static volatile int ws_sockfd = -1;
 
-static camera_fb_t *fb2send;
-// static vector_t *keypoints;
+static camera_fb_t *frame2send;
+
+static keypoints_shell_t *keypoints_shell_reference;
 
 
-#if DEFS_MARK_SUN == 1
 static esp_err_t form_metadata_json(
     char *dest_json,
     const uint16_t metadata_size,
     const camera_fb_t *frame
 ) {
+    char coords_buf[2 << 5];
+    vector_t *coords;
+#if DEFS_MARK_SUN == 1
     max_brightness_pixels_t *sun_positions = mark_sun(frame);
-    snprintf(dest_json, metadata_size, 
-             "{\"type\":\"sun-coords\",\"center\":{\"x\":%zu,\"y\":%zu},\"count\":%zu,\"coords\":[",
-             sun_positions->center_coord.x,
-             sun_positions->center_coord.y,
-             sun_positions->coords->size);
-    char coords_buf[32];
-    for (uint16_t i = 0; i < sun_positions->coords->size; ++i) {
-        snprintf(coords_buf, sizeof(coords_buf), 
-                 "{\"x\":%zu,\"y\":%zu}%s",
-                 ((pixel_coord_t *)vector_get(sun_positions->coords, i))->x,
-                 ((pixel_coord_t *)vector_get(sun_positions->coords, i))->y,
-                 i < sun_positions->coords->size - 1 ? "," : "");
-        strcat(dest_json, coords_buf);
-    }
+    snprintf(dest_json, metadata_size,
+            "{\"type\":\"metadata\",\"img-size\":{\"width\":%d,\"height\":%d},\"center\":{\"x\":%d,\"y\":%d},\"count\":%zu,\"coords\":[",
+            frame->width, frame->height,
+            sun_positions->center_coord.x,
+            sun_positions->center_coord.y,
+            sun_positions->coords->size
+    );
+    coords = sun_positions->coords;
+#else
+    snprintf(dest_json, metadata_size,
+            "{\"type\":\"metadata\",\"img-size\":{\"width\":%d,\"height\":%d},\"center\":{\"x\":%d,\"y\":%d},\"count\":%zu,\"coords\":[",
+            frame->width, frame->height,
+            -1, -1,
+            keypoints_shell_reference->keypoints != NULL ? keypoints_shell_reference->keypoints->size : 0
+    );
+    coords = keypoints_shell_reference->keypoints;
+#endif
+    if (xSemaphoreTake(keypoints_shell_reference->mutex, pdMS_TO_TICKS(1000)) != pdTRUE)
+        ESP_LOGE(TAG, "form_metadata_json failed to take keypoints_shell_reference->mutex ");
+    if (coords)
+        for (uint16_t i = 0; i < coords->size; ++i) {
+            snprintf(coords_buf, sizeof(coords_buf), 
+                    "{\"x\":%zu,\"y\":%zu}%s",
+                    ((pixel_coord_t *)vector_get(coords, i))->x,
+                    ((pixel_coord_t *)vector_get(coords, i))->y,
+                    i < coords->size - 1 ? "," : "");
+            strcat(dest_json, coords_buf);
+        }
     strcat(dest_json, "]}");
+#if DEFS_MARK_SUN == 1
     free_mbp(sun_positions);
+#else
+    xSemaphoreGive(keypoints_shell_reference->mutex);
+#endif
     return ESP_OK;
 }
-#endif
-
 
 // static esp_err_t form_metadata_json(
 //     char *dest_json,
@@ -84,14 +103,14 @@ static void send_image_task(void *arg)
         }
 
         if (xSemaphoreTake(frame_mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
-            ESP_LOGE(TAG, "Failed to take frame_mutex");
+            ESP_LOGE(TAG, "send_image_task failed to take frame_mutex");
             vTaskDelay(pdMS_TO_TICKS(1000));
             continue;
         }
 
-        camera_fb_t *frame = fb2send;
-        if (!frame) {
-            ESP_LOGE(TAG, "Could not access frame");
+        // camera_fb_t *frame = frame2send;
+        if (!frame2send) {
+            ESP_LOGE(TAG, "Could not access frame2send");
             xSemaphoreGive(frame_mutex);
             vTaskDelay(pdMS_TO_TICKS(1000));
             continue;
@@ -99,21 +118,20 @@ static void send_image_task(void *arg)
 
         uint8_t *jpg_buf = NULL;
         size_t jpg_buf_len = 0;
-        if (frame->format == PIXFORMAT_RGB565 && frame2jpg(frame, 80, &jpg_buf, &jpg_buf_len)) {
-#if DEFS_MARK_SUN == 1
+        if (frame2send->format == PIXFORMAT_RGB565 && frame2jpg(frame2send, 80, &jpg_buf, &jpg_buf_len)) {
+// #if DEFS_MARK_SUN == 1
             const uint16_t metadata_size = 512;
             char metadata_json[metadata_size];
-            form_metadata_json(metadata_json, metadata_size, frame);
-            // form_metadata_json(metadata_json, metadata_size, frame);
-            httpd_ws_frame_t ws_sun_coords_pkt = {
+            form_metadata_json(metadata_json, metadata_size, frame2send);
+            httpd_ws_frame_t ws_metadata_pkt = {
                 .final = true,
                 .fragmented = false,
                 .type = HTTPD_WS_TYPE_TEXT,
                 .payload = (uint8_t *)metadata_json,
                 .len = strlen(metadata_json)
             };
-            httpd_ws_send_frame_async(server, ws_sockfd, &ws_sun_coords_pkt);
-#endif
+            httpd_ws_send_frame_async(server, ws_sockfd, &ws_metadata_pkt);
+// #endif
             
             httpd_ws_frame_t ws_img_pkt = {
                 .final = true,
@@ -124,7 +142,7 @@ static void send_image_task(void *arg)
             };
             esp_err_t ret_err = httpd_ws_send_frame_async(server, ws_sockfd, &ws_img_pkt);
             if (ret_err != ESP_OK) {
-                ESP_LOGE(TAG, "Failed to send WebSocket frame: %d", ret_err);
+                ESP_LOGE(TAG, "Failed to send WebSocket frame2send: %d", ret_err);
                 ws_sockfd = -1; // Client disconnected
             } else {
                 ESP_LOGI(TAG, " -- sent image ");
@@ -134,7 +152,7 @@ static void send_image_task(void *arg)
             ESP_LOGE(TAG, "JPEG conversion failed");
         }
         xSemaphoreGive(frame_mutex);
-        fb2send = current_frame;
+        frame2send = current_frame;
         vTaskDelay(pdMS_TO_TICKS(sending_period));
 
         while (pause_photographer)
@@ -205,9 +223,8 @@ static esp_err_t rect_handler(httpd_req_t *req)
         ESP_LOGE(TAG, "Failed to take frame_mutex on fragment");
         return ESP_FAIL;
     }
-
-    // esp_camera_fb_return(current_frame);
-    fb2send = get_fragment(&rect_coords);
+    
+    frame2send = decorate_fragment(&rect_coords);
     xSemaphoreGive(frame_mutex);
 
     // servo_actions();
@@ -251,7 +268,8 @@ static esp_err_t setup_server(void) {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.core_id = 1;
     // config.stack_size = 8192; // bigger for WebSocket
-    fb2send = current_frame;
+    frame2send = current_frame;
+    keypoints_shell_reference = get_keypoints_shell_reference();
 
     esp_err_t server_err = httpd_start(&server, &config);
 
@@ -259,7 +277,7 @@ static esp_err_t setup_server(void) {
     httpd_register_uri_handler(server, &uri_ws);
     httpd_register_uri_handler(server, &uri_pause);
     httpd_register_uri_handler(server, &uri_set_rect);
-    xTaskCreate(send_image_task, "send_image_task", 4096, NULL, 5, NULL);
+    xTaskCreatePinnedToCore(send_image_task, "send_image_task", 4096, NULL, 5, NULL, 1);
 
     return server_err;
 }

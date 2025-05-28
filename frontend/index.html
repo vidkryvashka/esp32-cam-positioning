@@ -107,11 +107,12 @@ function connectWebSocket() {
     if (typeof event.data === 'string') {
       try {
         const metadata = JSON.parse(event.data);
-        if (metadata.type == "sun-coords") {
-          const sunData = metadata;
-          if (sunData && sunData.coords) {
-            console.log('Sun positions:', sunData);
-            drawSunPositions(sunData);
+        if (metadata.type == "metadata") {
+          imageWidth = metadata.width;
+          imageHeight = metadata.height;
+          if (metadata && metadata.coords) {
+            console.log('metadata:', metadata);
+            drawCoords(metadata);
           }
         } else if (metadata.data == "image_info") {
           console.log("got image info ", metadata.width, metadata.height);
@@ -135,14 +136,14 @@ function connectWebSocket() {
   };
 }
 
-function drawSunPositions(sunData) {
-  if (!sunData || !sunData.coords || !Array.isArray(sunData.coords)) {
-    console.warn('Invalid or missing sunData.coords');
+function drawCoords(metadata) {
+  if (!metadata || !metadata.coords || !Array.isArray(metadata.coords)) {
+    console.warn('Invalid or missing metadata.coords');
     return;
   }
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = 'red';
-  sunData.coords.forEach(coord => {
+  metadata.coords.forEach(coord => {
     if (coord && typeof coord.x === 'number' && typeof coord.y === 'number') {
       ctx.beginPath();
       ctx.arc(coord.x / coeff, coord.y / coeff, 3, 0, 2 * Math.PI);
@@ -150,9 +151,9 @@ function drawSunPositions(sunData) {
     }
   });
   ctx.fillStyle = 'purple';
-  if (sunData.center && typeof sunData.center.x === 'number' && typeof sunData.center.y === 'number') {
+  if (metadata.center && typeof metadata.center.x === 'number' && typeof metadata.center.y === 'number' && metadata.center.x >= 0 && metadata.center.y >= 0) {
     ctx.beginPath();
-    ctx.arc(sunData.center.x / coeff, sunData.center.y / coeff, 5, 0, 2 * Math.PI);
+    ctx.arc(metadata.center.x / coeff, metadata.center.y / coeff, 5, 0, 2 * Math.PI);
     ctx.fill();
   }
 }

@@ -15,20 +15,16 @@ volatile bool pause_photographer = 0;   // extern declared in img_processing/pho
 volatile SemaphoreHandle_t frame_mutex;
 camera_fb_t *current_frame = NULL;      // extern declared in camera.h
 
-static bool need2ORB = 0;
 
+static keypoints_shell_t keypoints_shell = {NULL, 0, 0};
 
-// for prediction, Kalman filter, not implemented yet
-#define MAX_COORDS_AMOUNT 3
-// uint8_t coords_amount = 0;
-// static pixel_coord_t coords_history[MAX_COORDS_AMOUNT] = {
-//     {0, 0}, {0, 0}, {0, 0}
-// };
+keypoints_shell_t* get_keypoints_shell_reference() {
+    return &keypoints_shell;
+}
 
+static camera_fb_t *fragment = NULL;
 
-static camera_fb_t *fragment = NULL; 
-
-camera_fb_t* get_fragment(
+camera_fb_t* decorate_fragment(
     const rectangle_coords_t *rect_coords
 ) {
     ESP_LOGI(TAG, "Rectangle coordinates: Top left: (%d, %d), width: %d, height: %d)", 
@@ -39,20 +35,8 @@ camera_fb_t* get_fragment(
     
     fragment = camera_fb_create(rect_coords->width, rect_coords->height, current_frame->format);
     camera_fb_crop(fragment, current_frame, rect_coords);
-    // coords_history[coords_amount] = (pixel_coord_t) {
-    //     .x = rect_coords->top_left.x + rect_coords->width / 2,
-    //     .y = rect_coords->top_left.y + rect_coords->height / 2
-    // };
 
-    // float similarity = 0;
-    // pixel_coord_t similar_coord = {0, 0};
-    // find_fragment(current_frame, fragment, &similarity, &similar_coord);
-
-    // ESP_LOGI(TAG, "find_fragment found similarity %.2f ", similarity);
-
-    // // crashes due to memory usage
-    
-    need2ORB = 1;
+    keypoints_shell.need2ORB = 1;
     pause_photographer = 0;
     ESP_LOGI(TAG, "Unpaused");
 
@@ -64,7 +48,7 @@ camera_fb_t* get_fragment(
 static esp_err_t take_photo()
 {
     if (xSemaphoreTake(frame_mutex, pdMS_TO_TICKS(5000)) != pdTRUE) {
-        ESP_LOGE(TAG, "Failed to take frame_mutex ");
+        ESP_LOGE(TAG, "take_photo() failed to take frame_mutex ");
         return ESP_FAIL;
     }
     if (current_frame != NULL) {
@@ -92,9 +76,12 @@ static void photographer_task(void *pvParameters)
                 vTaskDelay(pdMS_TO_TICKS(100));
         }
 
-        if (need2ORB) {
-            find_fragment(NULL, fragment, current_frame, NULL);
-            need2ORB = 0;
+        if (keypoints_shell.need2ORB | 1) {
+            if (xSemaphoreTake(keypoints_shell.mutex, pdMS_TO_TICKS(1000)) != pdTRUE)
+                ESP_LOGE(TAG, "photographer_task failed to take keypoints_shell.mutex ");
+            find_fragment(current_frame, fragment, NULL, keypoints_shell.keypoints);
+            xSemaphoreGive(keypoints_shell.mutex);
+            keypoints_shell.need2ORB = 0;
         }
 
         vTaskDelay(pdMS_TO_TICKS(PHOTOGRAPHER_DELAY_MS));
@@ -109,11 +96,16 @@ esp_err_t run_photographer()
 {
     frame_mutex = xSemaphoreCreateMutex();
     current_frame = esp_camera_fb_get();
+    keypoints_shell = (keypoints_shell_t){
+        .keypoints = vector_create(sizeof(pixel_coord_t)),
+        .mutex = xSemaphoreCreateMutex(),
+        0
+    };
     // if (xTaskCreate(&photographer_task,
     if (xTaskCreatePinnedToCore(
                     &photographer_task,
                     "photographer_task",
-                    2 << 13, // 2 << 13: 16384, // 2 << 12 8192,
+                    2 << 13, // = 16384, // 2 << 12 = 8192,
                     NULL,
                     2,
                     NULL,
@@ -136,22 +128,6 @@ esp_err_t run_photographer()
 
 
 
-
-
-
-
-// void primitive_photographer()
-// {
-//     float FOVs[2] = {0, 0};
-//     while(1) {
-//         camera_fb_t *frame = esp_camera_fb_get();
-//         max_brightness_pixels_t *mbp = mark_sun(frame);
-//         get_FOVs(&mbp->center_coord, FOVs);
-//
-//         esp_camera_fb_return(frame);
-//         vTaskDelay(pdMS_TO_TICKS(1000));
-//     }
-// }
 
 
 

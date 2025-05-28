@@ -5948,10 +5948,11 @@ static void fastNonmaxSuppression(
 }
 
 
-vector_t* fast9(
+esp_err_t fast9(
     const uint8_t *img1,
     const uint16_t w,
-    const uint16_t h
+    const uint16_t h,
+    vector_t *keypoints
 ) {
     vector_t *ct = vector_create(sizeof(pixel_coord_t));
     fast9Detect(img1, w, h, ct, THRESHOLD);
@@ -5959,11 +5960,13 @@ vector_t* fast9(
     vector_t *scores = vector_create(sizeof(uint8_t));
     fast9ComputeScores(img1, w, ct, scores, THRESHOLD);
 
-    vector_t *c = vector_create(sizeof(pixel_coord_t));
-    fastNonmaxSuppression(ct, scores, c);
+    // vector_t *c = vector_create(sizeof(pixel_coord_t));
+    // *keypoints = vector_create(sizeof(pixel_coord_t));
+    vector_clear(keypoints);
+    fastNonmaxSuppression(ct, scores, keypoints);
 
     vector_destroy(ct);
     vector_destroy(scores);
 
-    return c;
+    return ESP_OK;
 }
