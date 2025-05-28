@@ -68,13 +68,21 @@ esp_err_t get_FOVs(
 
 
 
-camera_fb_t* camera_fb_create(size_t width, size_t height, pixformat_t format);
+camera_fb_t* camera_fb_create(
+    const uint16_t width,
+    const uint16_t height,
+    const pixformat_t format
+);
 
 
-camera_fb_t* camera_fb_copy(const camera_fb_t* src);
+camera_fb_t* camera_fb_copy(
+    const camera_fb_t* src
+);
 
 
-void camera_fb_free(camera_fb_t* fb);
+void camera_fb_free(
+    camera_fb_t* fb
+);
 
 
 esp_err_t camera_fb_crop(
@@ -85,5 +93,4 @@ esp_err_t camera_fb_crop(
 
 
 #endif
-
 #endif

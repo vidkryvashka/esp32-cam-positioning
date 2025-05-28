@@ -33,22 +33,22 @@ static void im3to1(
 }
 
 
-static void paint(
-    uint8_t *im1,
-    uint8_t *im3,
-    vector_t *c,
-    uint16_t w,
-    uint16_t h
-) {
-    for (size_t i = 0; i < w * h; ++i)
-        im1[i] = im1[i] * SAVIMG_IMAGE_DIM_COEF;
-
-    for (size_t i = 0; i < c->size; ++i) {
-        pixel_coord_t *p = (pixel_coord_t *)vector_get(c, i);
-        if (p->x < w && p->y < h)
-            im1[w * p->y + p->x] = 255;
-    }
-}
+// static void paint(
+//     uint8_t *im1,
+//     uint8_t *im3,
+//     vector_t *c,
+//     uint16_t w,
+//     uint16_t h
+// ) {
+//     for (size_t i = 0; i < w * h; ++i)
+//         im1[i] = im1[i] * SAVIMG_IMAGE_DIM_COEF;
+// 
+//     for (size_t i = 0; i < c->size; ++i) {
+//         pixel_coord_t *p = (pixel_coord_t *)vector_get(c, i);
+//         if (p->x < w && p->y < h)
+//             im1[w * p->y + p->x] = 255;
+//     }
+// }
 
 
 // esp_err_t orb(
@@ -92,7 +92,7 @@ esp_err_t find_fragment(
     // paint(img1_target, img3_target, c, wt, ht);
     vector_destroy(c);
 
-    im1to3(img1_target, img3_target, wt * ht);
+    // im1to3(img1_target, img3_target, wt * ht);
 
     // saveBMP(DEFAULT_OUT_IMG_PATH, img3_target, wt, ht);
 

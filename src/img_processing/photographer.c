@@ -15,6 +15,8 @@ volatile bool pause_photographer = 0;   // extern declared in img_processing/pho
 volatile SemaphoreHandle_t frame_mutex;
 camera_fb_t *current_frame = NULL;      // extern declared in camera.h
 
+static bool need2ORB = 0;
+
 
 // for prediction, Kalman filter, not implemented yet
 #define MAX_COORDS_AMOUNT 3
@@ -49,7 +51,8 @@ camera_fb_t* get_fragment(
     // ESP_LOGI(TAG, "find_fragment found similarity %.2f ", similarity);
 
     // // crashes due to memory usage
-
+    
+    need2ORB = 1;
     pause_photographer = 0;
     ESP_LOGI(TAG, "Unpaused");
 
@@ -88,10 +91,16 @@ static void photographer_task(void *pvParameters)
             while (pause_photographer)
                 vTaskDelay(pdMS_TO_TICKS(100));
         }
+
+        if (need2ORB) {
+            find_fragment(NULL, fragment, current_frame, NULL);
+            need2ORB = 0;
+        }
+
         vTaskDelay(pdMS_TO_TICKS(PHOTOGRAPHER_DELAY_MS));
 
         if (!(esp_random() % MEMORY_LOG_PROBABILITY_DIVIDER))
-            log_memory();
+            log_memory(xPortGetCoreID());
     }
 }
 
@@ -100,12 +109,15 @@ esp_err_t run_photographer()
 {
     frame_mutex = xSemaphoreCreateMutex();
     current_frame = esp_camera_fb_get();
-    if (xTaskCreate(&photographer_task,
+    // if (xTaskCreate(&photographer_task,
+    if (xTaskCreatePinnedToCore(
+                    &photographer_task,
                     "photographer_task",
-                    4096,
+                    2 << 13, // 2 << 13: 16384, // 2 << 12 8192,
                     NULL,
                     2,
-                    NULL)
+                    NULL,
+                    0 )
     ) {
         ESP_LOGE(TAG, "Failed to create photographer_task");
         return ESP_FAIL;

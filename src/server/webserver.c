@@ -32,6 +32,7 @@ static httpd_handle_t server = NULL;
 static volatile int ws_sockfd = -1;
 
 static camera_fb_t *fb2send;
+// static vector_t *keypoints;
 
 
 #if DEFS_MARK_SUN == 1
@@ -210,6 +211,7 @@ static esp_err_t rect_handler(httpd_req_t *req)
     xSemaphoreGive(frame_mutex);
 
     // servo_actions();
+    log_memory(xPortGetCoreID());
 
     return ESP_OK;
 }
@@ -247,6 +249,7 @@ static httpd_uri_t uri_set_rect = {
 
 static esp_err_t setup_server(void) {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+    config.core_id = 1;
     // config.stack_size = 8192; // bigger for WebSocket
     fb2send = current_frame;
 

@@ -32,7 +32,13 @@ esp_err_t init_esp_things(void);
  */
 void led_blink(float periods, uint8_t count);
 
-void log_memory();
+
+/**
+ * @brief logs heap memory info
+ * 
+ * @param core_id
+ */
+void log_memory(BaseType_t core_id);
 
 
 #endif

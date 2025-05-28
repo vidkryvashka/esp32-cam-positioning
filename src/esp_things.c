@@ -73,11 +73,11 @@ void led_blink(float periods, uint8_t count)
 }
 
 
-void log_memory()
+void log_memory(BaseType_t core_id)
 {
     size_t free_size = heap_caps_get_free_size(MALLOC_CAP_DEFAULT);
     size_t total_size = heap_caps_get_total_size(MALLOC_CAP_DEFAULT);
     size_t used_size = total_size - free_size;
-    ESP_LOGI(TAG, "  --  memory used %d / %d (%.2f %%) ", used_size, total_size,
-        (float)used_size * 100 / (float)total_size);
+    ESP_LOGI(TAG, "  --  memory used %d / %d (%.2f %%) core %d ", used_size, total_size,
+        (float)used_size * 100 / (float)total_size, core_id);
 }

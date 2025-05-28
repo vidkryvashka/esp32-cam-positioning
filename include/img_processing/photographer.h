@@ -7,7 +7,7 @@
 extern volatile bool pause_photographer; // initiated in photographer.c, used in photographer_task, then in webserver.c
 // extern volatile SemaphoreHandle_t pause_photographer_mutex; // like an idea
 
-#define PHOTOGRAPHER_DELAY_MS 1000
+#define PHOTOGRAPHER_DELAY_MS 500
 
 /**
  * @brief writes cropped current_frame into itself by rect_coords scema
