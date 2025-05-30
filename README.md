@@ -5,8 +5,8 @@
 
 ## How it works for now
 
-## finds
+### mode detecting edges
 ![alt text fast9](https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/working.gif)
 
-## mode looking for sun: finds brightest points, filters it, detects middle point of them and x y angle to turn camera towards it.
+### mode looking for sun: finds brightest points, filters it, detects middle point of them and x y angle to turn camera towards it.
 ![alt text look4sun](https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/look4sun.png)
