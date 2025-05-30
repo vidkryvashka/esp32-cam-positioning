@@ -65,3 +65,21 @@ esp_err_t my_servo_set_angle(uint8_t servo_chan, float angle)
 
     return err;
 }
+
+
+
+
+
+
+
+
+
+// void servo_actions()
+// {
+//     float servo0angle = my_servo_get_angle(SERVO_PAN_CH);
+//     float servo1angle = my_servo_get_angle(SERVO_TILT_CH);
+//     ESP_LOGI(TAG, "servos angles: pan: %.0f tilt: %.0f\n", servo0angle, servo1angle);
+//     
+//     my_servo_set_angle(SERVO_PAN_CH, 0);
+//     // ESP_LOGI(TAG, "the plug ");
+// }

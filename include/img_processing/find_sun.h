@@ -8,15 +8,6 @@
 /**
  * @brief allocs and needs to free .coords
  */
-// typedef struct {
-//     pixel_coord_t *coords;
-//     uint16_t count;
-//     uint16_t capacity;
-//     
-//     vector_t *coords_vec;
-//     pixel_coord_t center_coord;
-// } max_brightness_pixels_t;
-
 typedef struct {
     vector_t *coords;
     pixel_coord_t center_coord;

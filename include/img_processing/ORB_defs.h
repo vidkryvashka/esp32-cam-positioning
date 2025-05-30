@@ -5,7 +5,8 @@
 #include "my_vector.h"
 #include "img_processing/camera.h"
 
-#define THRESHOLD 100
+#define START_THRESHOLD 70
+#define KEYPOINTS_MAX_COUNT 32
 #define BRIEF_SIZE 256
 #define PATCH_SIZE 31
 #define SIGMA 5
@@ -33,31 +34,25 @@ typedef struct {
 /**
  * @brief fast9 decision tree keypoints algorithm
  * 
- * @param img1  gray single channel image buffer
- * @param w     width
- * @param h     height
+ * @param fb1       gray single channel camera_fb_t
  * @param keypoints global messy variable to send it to web page
- * @return vector_t* pixel_coord_t keypoints
+ * @return          vector_t* pixel_coord_t keypoints
  */
 esp_err_t fast9(
-    const uint8_t *img1,
-    const uint16_t w,
-    const uint16_t h,
-    vector_t *keypoints
+    const camera_fb_t *fb1, // gray single channel
+    vector_t *keypoints,
+    uint8_t threshold
 );
-
-
-// void operate(int argc, char **argv);
 
 
 /**
  * @brief 
  * 
- * @param frame big one
- * @param fragment consider smaller image
- * @param top_left forgot why
+ * @param frame     big one
+ * @param fragment  consider smaller image
+ * @param top_left  forgot why
  * @param keypoints global messy variable to send it to web page
- * @return similarity: [0, 100] % posibility measurement fragment is in frame, < 0 if some errors, not implemented
+ * @return          similarity: [0, 100] % posibility measurement fragment is in frame, < 0 if some errors, not implemented
  */
 int8_t find_fragment(
     camera_fb_t *frame,

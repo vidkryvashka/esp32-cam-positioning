@@ -5,32 +5,8 @@
 
 #define TAG "my_vision"
 
-
-// Transition between 1 and 3 channel Pictures
-// static void im1to3(
-//     uint8_t *im1,
-//     uint8_t *im3,
-//     size_t size1
-// ) {
-//     for (size_t i1 = 0, i3 = 0; i1 < size1; ++i1) {
-//         im3[i3] = im1[i1];
-//         im3[i3 + 1] = im1[i1];
-//         im3[i3 + 2] = im1[i1];
-//         i3 += 3;
-//     }
-// }
-
-
-static void im3to1(
-    const uint8_t *im3,
-    uint8_t *im1,
-    const size_t size1
-) {
-    for (size_t i1 = 0, i3 = 0; i1 < size1; ++i1) {
-        im1[i1] = (im3[i3] + im3[i3 + 1] + im3[i3 + 2]) / 3;
-        i3 += 3;
-    }
-}
+static uint8_t fast9_threshold = START_THRESHOLD;
+#define BALLANCE_COEF   1.3
 
 
 // static void paint(
@@ -63,43 +39,45 @@ static void im3to1(
 // );
 
 
+static esp_err_t balance_fast9(
+    const camera_fb_t *fb1, // gray single channel
+    vector_t *keypoints
+) {
+    while (1) {
+        fast9(fb1, keypoints, fast9_threshold);
+        if (keypoints->size > KEYPOINTS_MAX_COUNT)
+            fast9_threshold *= BALLANCE_COEF;
+        else {
+            fast9_threshold /= BALLANCE_COEF;
+            break;
+        }
+    }
+    
+    return ESP_OK;
+}
+
+
 int8_t find_fragment(
     camera_fb_t *frame,
     camera_fb_t *fragment,
     rectangle_coords_t *rect,
     vector_t *keypoints
 ) {
-    // uint16_t wt = fragment->width;    // target
-    // uint16_t ht = fragment->height;
-    uint16_t ws = frame->width;    // seek
-    uint16_t hs = frame->height;
+
+    if (frame->format != PIXFORMAT_GRAYSCALE) {
+        ESP_LOGE(TAG, "expected PIXFORMAT_GRAYSCALE");
+    }
 
     // uint8_t *img3_target = fragment->buf; // (uint8_t *)malloc(10000); // = loadBMP(&wt, &ht, argc > 1 ? argv[1] : DEFAULT_TARGET_IMG_PATH);
-    // uint8_t *img1_target = (uint8_t *)malloc(wt * ht * sizeof(uint8_t));
-    uint8_t *img3_seek = frame->buf; // loadBMP(&ws, &hs, DEFAULT_SEEK_IMG_PATH);
-    uint8_t *img1_seek = (uint8_t *)malloc(ws * hs * sizeof(uint8_t));
+    // uint8_t *img3_seek = frame->buf; // loadBMP(&ws, &hs, DEFAULT_SEEK_IMG_PATH);
+    // uint8_t *img1_seek = (uint8_t *)malloc(ws * hs * sizeof(uint8_t));
     
-    // into gray
-    // im3to1(img3_target, img1_target, wt * ht);
-    im3to1(img3_seek, img1_seek, ws * hs);
     
     // orb(img3_target, img3_seek, img1_target, img1_seek, wt, ht, ws, hs);
 
-    // apply detector
-    fast9(img1_seek, ws, hs, keypoints);
-    ESP_LOGI(TAG, "image (%d x %d) corners: %d\n", ws, hs, keypoints->size);
-    // vector_print(*keypoints);
+    balance_fast9(frame, keypoints);
+    ESP_LOGI(TAG, "image (%d x %d) corners: %d, threshold %d\n", frame->width, frame->height, keypoints->size, fast9_threshold);
     // paint(img1_target, img3_target, c, wt, ht);
-    // vector_destroy(c);
-
-    // im1to3(img1_target, img3_target, wt * ht);
-
-    // saveBMP(DEFAULT_OUT_IMG_PATH, img3_target, wt, ht);
-
-    // free(img3_target);
-    // free(img1_target);
-    // free(img3_seek);
-    free(img1_seek);
 
     return 0;
 }

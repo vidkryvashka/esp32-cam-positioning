@@ -15,7 +15,6 @@ extern volatile bool pause_photographer; // initiated in photographer.c, used in
 
 typedef struct {
     vector_t *keypoints;
-    SemaphoreHandle_t mutex;
     bool need2ORB;
 } keypoints_shell_t;
 

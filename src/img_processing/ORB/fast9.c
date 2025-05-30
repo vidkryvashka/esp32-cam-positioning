@@ -2810,12 +2810,12 @@ static uint8_t fast9CornerScore(
 
 
 static void fast9ComputeScores(
-    const uint8_t *img1,
-    uint16_t w,
+    const camera_fb_t *fb1, // gray single channel
     const vector_t *c,
     vector_t *scores,
     uint8_t bstart
 ) {
+    uint16_t w = fb1->width;
     int pixel[16];
     makeOffsets(pixel, w);
     uint16_t i, num_corners = c->size;
@@ -2826,7 +2826,7 @@ static void fast9ComputeScores(
     for (i = 0; i < num_corners; ++i)
     {
         pixel_coord_t *p = vector_get(c, i);
-        uint8_t score = fast9CornerScore(img1 + w * p->y + p->x, pixel, bstart);
+        uint8_t score = fast9CornerScore(fb1->buf + w * p->y + p->x, pixel, bstart);
         vector_set(scores, i, &score);
         vector_push_back(scores, &score);
     }
@@ -2835,12 +2835,11 @@ static void fast9ComputeScores(
 
 
 static void fast9Detect(
-    const uint8_t *img1,
-    int w,
-    int h,
+    const camera_fb_t *fb1, // gray single channel
     vector_t *c,
     int b
 ) {
+    int w = fb1->width, h = fb1->height;
     uint8_t margin = 4;
     int pixel[16];
     makeOffsets(pixel, w);
@@ -2849,7 +2848,7 @@ static void fast9Detect(
     for (uint16_t y = margin; y < h - margin; ++y)
         for (uint16_t x = margin; x < w - margin; ++x)
         {
-            const uint8_t *p = img1 + y * w + x; //  &img.at<uint8_t>(y,x);s
+            const uint8_t *p = fb1->buf + y * w + x;
 
             int cb = *p + b;
             int c_b = *p - b;
@@ -5949,19 +5948,16 @@ static void fastNonmaxSuppression(
 
 
 esp_err_t fast9(
-    const uint8_t *img1,
-    const uint16_t w,
-    const uint16_t h,
-    vector_t *keypoints
+    const camera_fb_t *fb1, // gray single channel
+    vector_t *keypoints,
+    uint8_t threshold
 ) {
     vector_t *ct = vector_create(sizeof(pixel_coord_t));
-    fast9Detect(img1, w, h, ct, THRESHOLD);
+    fast9Detect(fb1, ct, threshold);
     
     vector_t *scores = vector_create(sizeof(uint8_t));
-    fast9ComputeScores(img1, w, ct, scores, THRESHOLD);
+    fast9ComputeScores(fb1, ct, scores, threshold);
 
-    // vector_t *c = vector_create(sizeof(pixel_coord_t));
-    // *keypoints = vector_create(sizeof(pixel_coord_t));
     vector_clear(keypoints);
     fastNonmaxSuppression(ct, scores, keypoints);
 

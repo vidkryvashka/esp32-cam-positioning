@@ -77,7 +77,6 @@
       <p class="card-title">Camera Stream</p>
       <div style="position: relative;">
         <img id="camera-feed" src="">
-        <!-- <canvas id="overlay" width="480" height="480"></canvas> -->
         <canvas id="overlay"></canvas>
       </div>
       <button id="toggle-rect-mode">Select Rectangle</button>
@@ -99,7 +98,8 @@ const ctx = canvas.getContext('2d');
 let ws = null;
 
 function connectWebSocket() {
-  ws = new WebSocket(`ws://${window.location.hostname}/ws`);
+  // if (ws == -1)
+    ws = new WebSocket(`ws://${window.location.hostname}/ws`);
   ws.onopen = () => {
     console.log('WebSocket connected');
   };
@@ -114,11 +114,8 @@ function connectWebSocket() {
             console.log('metadata:', metadata);
             drawCoords(metadata);
           }
-        } else if (metadata.data == "image_info") {
-          console.log("got image info ", metadata.width, metadata.height);
-          iamgeWidth = metadata.width;
-          imageHeight = metadata.height;
-        }
+        } else
+          console.log("unsupported metadata type ", metadata.type);
       } catch (e) {
         console.error('Error parsing json:', e);
       }
@@ -129,7 +126,7 @@ function connectWebSocket() {
   };
   ws.onclose = () => {
     console.log('WebSocket disconnected, reconnecting...');
-    setTimeout(connectWebSocket, 1000);
+    setTimeout(connectWebSocket, 2000);
   };
   ws.onerror = (error) => {
     console.error('WebSocket error:', error);

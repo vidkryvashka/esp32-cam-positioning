@@ -3,6 +3,7 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
+.DS_Store
 sdkconfig.esp32cam
 sdkconfig.esp32cam.old
 
@@ -13,4 +14,3 @@ lib/*
 components/esp32-camera*
 
 unused
-
