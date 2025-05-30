@@ -4,6 +4,6 @@
 
 
 ## How it works for now
-<!-- ![alt text look4sun](https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/look4sun.png) -->
+![alt text look4sun](https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/look4sun.png)
 
 ![alt text fast9](https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/working.gif)
