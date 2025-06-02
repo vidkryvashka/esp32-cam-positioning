@@ -13,7 +13,7 @@
 #include "server/setting_mdns.h"
 
 #ifndef TAG
-#define TAG "my_mdns"
+    #define TAG "my_mdns"
 #endif
 
 #define MDNS_HOSTNAME "esp32"

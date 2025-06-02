@@ -14,15 +14,24 @@
 
 #define BOARD "esp32"
 
+// typedef enum {
+//     MODE_FIND_SUN,
+//     MODE_FAST9
+// } analisis_modes;
+
+#define MODE_FIND_SUN   0
+#define MODE_FAST9      1
+
+#define ANALISIS_MODE MODE_FAST9
+
+#define MEMORY_LOG_PROBABILITY_DIVIDER 7
+
 
 /** 
  * @brief inits gpio, nvs_flash
  */
 esp_err_t init_esp_things(void);
 
-#define DEFS_MARK_SUN 0
-
-#define MEMORY_LOG_PROBABILITY_DIVIDER 7
 
 /**
  * @brief Blinks with led. Led pin defined as LED_PIN

@@ -4,10 +4,17 @@
 #include "esp_random.h"
 
 #include "img_processing/photographer.h"
-#include "img_processing/ORB_defs.h"
+
+#if ANALISIS_MODE == MODE_FIND_SUN
+    #include "img_processing/ORB_defs.h"
+#endif
+
+#if ANALISIS_MODE == MODE_FIND_SUN
+    #include "img_processing/find_sun.h"
+#endif
 
 #ifndef TAG
-#define TAG "my_photographer"
+    #define TAG "my_photographer"
 #endif
 
 
@@ -16,7 +23,7 @@ volatile SemaphoreHandle_t frame_mutex;
 camera_fb_t *current_frame = NULL;      // extern declared in camera.h
 
 
-static keypoints_shell_t keypoints_shell = {NULL, 0};
+static keypoints_shell_t keypoints_shell; // = {NULL, 0};
 
 keypoints_shell_t* get_keypoints_shell_reference()
 {
@@ -46,20 +53,23 @@ camera_fb_t* decorate_fragment(
 }
 
 
-static esp_err_t take_photo()
+static esp_err_t take_analize_photo()
 {
     if (xSemaphoreTake(frame_mutex, pdMS_TO_TICKS(PHOTOGRAPHER_DELAY_MS * 10)) != pdTRUE) {
         ESP_LOGE(TAG, "take_photo() failed to take frame_mutex ");
         return ESP_FAIL;
     }
 
-    if (current_frame != NULL) {
+    if (current_frame != NULL)
         esp_camera_fb_return(current_frame);
-    }
 
     current_frame = esp_camera_fb_get();
 
+#if ANALISIS_MODE == MODE_FIND_SUN
+    mark_sun(&keypoints_shell.mbp, current_frame);
+#elif ANALISIS_MODE == MODE_FAST9
     find_fragment(current_frame, fragment, NULL, keypoints_shell.keypoints);
+#endif
 
     xSemaphoreGive(frame_mutex);
 
@@ -77,8 +87,9 @@ static void photographer_task(
 ) {
     while (1) {
         if (!pause_photographer) {
-            if (take_photo())
+            if (take_analize_photo() != ESP_OK)
                 ESP_LOGE(TAG, "task couldn't take_photo ");
+            
         } else {
             ESP_LOGI(TAG, "photographer_task paused ");
             while (pause_photographer)
@@ -98,7 +109,14 @@ esp_err_t run_photographer()
     frame_mutex = xSemaphoreCreateMutex();
     current_frame = esp_camera_fb_get();
     keypoints_shell = (keypoints_shell_t){
+#if ANALISIS_MODE == MODE_FIND_SUN
+        .mbp = {
+            .coords = vector_create(sizeof(pixel_coord_t)),
+            .center_coord = (pixel_coord_t){0, 0}
+        },
+#else
         .keypoints = vector_create(sizeof(pixel_coord_t)),
+#endif
         .need2ORB = 0
     };
     if (xTaskCreatePinnedToCore(
@@ -115,29 +133,3 @@ esp_err_t run_photographer()
     }
     return ESP_OK;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// /**
-//  * @brief Data structure of camera frame buffer
-//  */
-// typedef struct {
-//     uint8_t * buf;              /*!< Pointer to the pixel data */
-//     size_t len;                 /*!< Length of the buffer in bytes */
-//     size_t width;               /*!< Width of the buffer in pixels */
-//     size_t height;              /*!< Height of the buffer in pixels */
-//     pixformat_t format;         /*!< Format of the pixel data */
-//     struct timeval timestamp;   /*!< Timestamp since boot of the first DMA buffer of the frame */
-// } camera_fb_t;

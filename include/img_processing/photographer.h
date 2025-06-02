@@ -6,6 +6,11 @@
 #include "img_processing/camera.h"
 #include "freertos/semphr.h"
 
+#if ANALISIS_MODE == MODE_FIND_SUN
+    #include "img_processing/find_sun.h"
+#elif ANALISIS_MODE == MODE_FAST9
+    #include "img_processing/ORB_defs.h"
+#endif
 
 extern volatile bool pause_photographer; // initiated in photographer.c, used in photographer_task, then in webserver.c
 // extern volatile SemaphoreHandle_t pause_photographer_mutex; // like an idea
@@ -14,7 +19,11 @@ extern volatile bool pause_photographer; // initiated in photographer.c, used in
 
 
 typedef struct {
+#if ANALISIS_MODE == MODE_FIND_SUN
+    max_brightness_pixels_t mbp;
+#elif ANALISIS_MODE == MODE_FAST9
     vector_t *keypoints;
+#endif
     bool need2ORB;
 } keypoints_shell_t;
 

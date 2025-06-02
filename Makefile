@@ -1,6 +1,5 @@
 HTML_FRONTEND_FILE = frontend/index.html
 HTML_H_FILE = include/server/index_html.h
-SERIAL_PORT = /dev/cu.usbserial-120
 PIO_ENV = /Users/user/.platformio/penv/bin/activate
 CAMERA_LIB = lib/esp32-camera-latest
 SRC = src

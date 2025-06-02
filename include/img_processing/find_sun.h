@@ -17,12 +17,14 @@ typedef struct {
 /**
  * @brief makes as called
  * 
- * @param frame takes camera_fb_t*
+ * @param *mbp max_brightness_pixels_t destination to write
+ * @param frame camera_fb_t*
  * @return max_brightness_pixels_t* which then needs to be freed
  */
-max_brightness_pixels_t* mark_sun(const camera_fb_t *frame);
-
-esp_err_t free_mbp(max_brightness_pixels_t *mbp);
+esp_err_t mark_sun(
+    max_brightness_pixels_t *mbp,
+    const camera_fb_t *frame
+);
 
 
 #endif

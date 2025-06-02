@@ -1,7 +1,8 @@
 #include "img_processing/camera.h"
 
-#define TAG "my_operating_with_fb"
-
+#ifndef TAG
+    #define TAG "my_operating_with_fb"
+#endif
 
 camera_fb_t* camera_fb_create(
     const uint16_t width,
