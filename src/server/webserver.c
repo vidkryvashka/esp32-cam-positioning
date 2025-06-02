@@ -19,15 +19,21 @@
 #include "my_servos.h"
 
 
-#if DEFS_MARK_SUN == 1
+// #if DEFS_MARK_SUN == 1
+#if ANALISIS_MODE == MODE_FIND_SUN
     #include "img_processing/find_sun.h"
 #endif
 
-#define TAG "my_webserver"\
+#ifndef TAG
+    #define TAG "my_webserver"
+#endif
+
 
 static uint16_t sending_period = PHOTOGRAPHER_DELAY_MS; // 1000;  // ms
 static httpd_handle_t server = NULL;
-static volatile int ws_sockfd = -1;
+// static volatile int ws_sockfd = -1;
+#define MAX_WS_CLIENTS 3
+static int ws_clients[MAX_WS_CLIENTS] = {-1, -1, -1};
 
 static camera_fb_t *frame2send;
 
@@ -39,19 +45,20 @@ static esp_err_t form_metadata_json(
     const uint16_t metadata_size,
     const camera_fb_t *frame
 ) {
-    // vector_t *coords = NULL;
+    esp_err_t err = ESP_OK;
     char format[] = "{\"type\":\"metadata\",\"img-size\":{\"width\":%d,\"height\":%d},\"center\":{\"x\":%d,\"y\":%d},\"count\":%zu,\"coords\":[";
-#if DEFS_MARK_SUN == 1
-    max_brightness_pixels_t *sun_positions = mark_sun(frame);   // defer free_mbp(sun_positions);
-    const vector_t *coords = sun_positions->coords;
+// #if DEFS_MARK_SUN == 1
+#if ANALISIS_MODE == MODE_FIND_SUN
+    max_brightness_pixels_t *mbp = &keypoints_shell_local_ref->mbp;
+    const vector_t *coords = mbp->coords;
     snprintf(dest_json, metadata_size,
             format,
             frame->width, frame->height,
-            sun_positions->center_coord.x,
-            sun_positions->center_coord.y,
+            mbp->center_coord.x,
+            mbp->center_coord.y,
             coords->size
     );
-#else
+#elif ANALISIS_MODE == MODE_FAST9
     const vector_t *coords = keypoints_shell_local_ref->keypoints;
     snprintf(dest_json, metadata_size,
             format,
@@ -61,9 +68,7 @@ static esp_err_t form_metadata_json(
     );
 #endif
     if (coords) {
-        char coords_buf[2 << 8];
-        // vector_print(coords);
-        ESP_LOGI(TAG, "coords n: %d ", coords->size);
+        char coords_buf[metadata_size - strlen(format)];
         for (size_t i = 0; i < coords->size; ++i) {
             pixel_coord_t *coord = vector_get(coords, i);
             snprintf(coords_buf, sizeof(coords_buf), 
@@ -73,17 +78,30 @@ static esp_err_t form_metadata_json(
                     i < coords->size - 1 ? "," : "");
             strcat(dest_json, coords_buf);
         }
-    } else
+    } else {
         ESP_LOGE(TAG, "form_metadata_json no coords ");
+        err = ESP_FAIL;
+    }
     strcat(dest_json, "]}");
-#if DEFS_MARK_SUN == 1
-    free_mbp(sun_positions);
-#else
-    ;
-#endif
 
-    ESP_LOGI(TAG, "in the end of form meta ");
-    return ESP_OK;
+    return err;
+}
+
+
+static uint8_t ws_send(
+    httpd_ws_frame_t *ws_pkt
+) {
+    uint8_t num_sent = 0;
+    for (int i = 0; i < MAX_WS_CLIENTS; ++i, ++num_sent) {
+        if (ws_clients[i] != -1) {
+            esp_err_t ret = httpd_ws_send_frame_async(server, ws_clients[i], ws_pkt);
+            if (ret != ESP_OK) {
+                ESP_LOGW(TAG, "Client №%d %d disconnected", i, ws_clients[i]);
+                ws_clients[i] = -1;
+            }
+        }
+    }
+    return num_sent;
 }
 
 
@@ -91,14 +109,15 @@ static void send_image_task(
     void *pvParameters
 ) {
     while (true) {
-        if (ws_sockfd == -1) {
-            vTaskDelay(pdMS_TO_TICKS(2000));
+
+        if ((ws_clients[0] & ws_clients[0] & ws_clients[0]) == -1) {
+            vTaskDelay(pdMS_TO_TICKS(1000));
             continue;
         }
 
-        if (xSemaphoreTake(frame_mutex, pdMS_TO_TICKS(PHOTOGRAPHER_DELAY_MS * 2)) != pdTRUE) {
+        if (xSemaphoreTake(frame_mutex, pdMS_TO_TICKS(2000)) != pdTRUE) {
             ESP_LOGE(TAG, "send_image_task failed to take frame_mutex");
-            vTaskDelay(pdMS_TO_TICKS(PHOTOGRAPHER_DELAY_MS * 2));
+            vTaskDelay(pdMS_TO_TICKS(1000));
             continue;
         }
 
@@ -115,7 +134,6 @@ static void send_image_task(
             const uint16_t metadata_size = 2 << 9;
             char metadata_json[metadata_size];
             form_metadata_json(metadata_json, metadata_size, frame2send);
-            ESP_LOGI(TAG, "formed metadata_json ");
             httpd_ws_frame_t ws_metadata_pkt = {
                 .final = true,
                 .fragmented = false,
@@ -123,11 +141,8 @@ static void send_image_task(
                 .payload = (uint8_t *)metadata_json,
                 .len = strlen(metadata_json)
             };
-            ESP_LOGI(TAG, "sent metadata ");
-
-            esp_err_t ret_err = httpd_ws_send_frame_async(server, ws_sockfd, &ws_metadata_pkt);
-            if (ret_err != ESP_OK)
-                ESP_LOGE(TAG, "Failed to send WebSocket metadata: %d", ret_err);
+            // ESP_LOGI(TAG, "send_image_task sent metadata ");
+            uint8_t num_meta_sent = ws_send(&ws_metadata_pkt);
 
             httpd_ws_frame_t ws_img_pkt = {
                 .final = true,
@@ -136,16 +151,14 @@ static void send_image_task(
                 .payload = jpg_buf,
                 .len = jpg_buf_len
             };
-            ret_err = httpd_ws_send_frame_async(server, ws_sockfd, &ws_img_pkt);
-            if (ret_err != ESP_OK) {
-                ESP_LOGE(TAG, "Failed to send WebSocket frame2send: %d", ret_err);
-                ws_sockfd = -1; // Client disconnected
-            } else {
-                ESP_LOGI(TAG, " -- sent pkts ");
-            }
+            uint8_t num_frame_sent = ws_send(&ws_img_pkt);
+            if (num_meta_sent != num_frame_sent)
+                ESP_LOGW(TAG, "send_image_task num_meta_sent != num_frame_sent : %d %d ", num_meta_sent, num_frame_sent);
+            if (num_frame_sent == 0)
+                ESP_LOGI(TAG, "send_image_task no clients ");
             free(jpg_buf);
         } else {
-            ESP_LOGE(TAG, "JPEG conversion failed");
+            ESP_LOGE(TAG, "send_image_task JPEG conversion failed");
         }
         xSemaphoreGive(frame_mutex);
         frame2send = current_frame;
@@ -153,6 +166,8 @@ static void send_image_task(
 
         while (pause_photographer)
             vTaskDelay(pdMS_TO_TICKS(500));
+        
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 
@@ -160,12 +175,18 @@ static void send_image_task(
 static esp_err_t ws_handler(httpd_req_t *req)
 {
     if (req->method == HTTP_GET) {
-        ESP_LOGI(TAG, "WebSocket handshake");
-        ws_sockfd = httpd_req_to_sockfd(req);
-        return ESP_OK;
+        int sockfd = httpd_req_to_sockfd(req);
+        for (int i = 0; i < MAX_WS_CLIENTS; ++i) {
+            if (ws_clients[i] == -1) {
+                ws_clients[i] = sockfd;
+                ESP_LOGI(TAG, "New WS client №%d: %d", i, sockfd);
+                break;
+            }
+        }
     }
     return ESP_OK;
 }
+
 
 
 static esp_err_t get_req_handler(httpd_req_t *req)

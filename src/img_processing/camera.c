@@ -15,7 +15,7 @@
 #include "img_processing/camera.h"
 
 #ifndef TAG
-#define TAG "my_camera"
+    #define TAG "my_camera"
 #endif
 
 
@@ -43,7 +43,7 @@ static camera_config_t camera_config = {
     .ledc_timer = LEDC_TIMER_0,
     .ledc_channel = LEDC_CHANNEL_0,
 
-    .pixel_format = PIXFORMAT_GRAYSCALE, // RGB565, //YUV422,GRAYSCALE,RGB565,JPEG
+    .pixel_format = PIXFORMAT_CHOISE, // RGB565, //YUV422,GRAYSCALE,RGB565,JPEG
 
     // For ESP32, do not use sizes above QVGA when not JPEG. The performance of the ESP32-S series has improved a lot, but JPEG mode always gives better frame rates.
     /** considering cases
@@ -64,12 +64,10 @@ uint16_t frame_height;
 
 esp_err_t init_camera(void)
 {
-    //initialize the camera
     esp_err_t err = esp_camera_init(&camera_config);
     sensor_t *s = esp_camera_sensor_get();
     s->set_vflip(s, 1);
     s->set_hmirror(s, 1);
-    // esp_camera_sensor_get()->set_vflip(esp_camera_sensor_get(), 1);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Camera Init Failed");
         return err;
@@ -100,39 +98,6 @@ esp_err_t init_camera(void)
 
     return ESP_OK;
 }
-
-
-// esp_err_t print_pixel_value(
-//     camera_fb_t *frame,
-//     uint8_t x,
-//     uint8_t y
-// ) {
-//     if (frame->format != PIXFORMAT_RGB565) {
-//         perror("get_pixel_value wrong PIXFORMAT");
-//         return -1;
-//     }
-// 
-//     if (x >= frame->width || y >= frame->height) {
-//         perror("Coordinates out of bounds!");
-//         return -1;
-//     }
-// 
-//     // frame->buf is (uint8_t *)
-//     uint16_t *pixel_data = (uint16_t *)frame->buf;
-//     // Calculate the index in the buffer
-//     uint16_t index = y * frame->width + x;
-//     uint16_t pixel = pixel_data[index];
-// 
-//     // Each pixel is 2 bytes in RGB565
-//     // bits per colors RRRRRGGG GGGBBBBB
-//     // Extract R, G, B components
-//     uint8_t r = (pixel >> 11) & 0x1F; // 5 bits for red
-//     uint8_t g = (pixel >> 5) & 0x3F;  // 6 bits for green
-//     uint8_t b = pixel & 0x1F;         // 5 bits for blue
-//     printf("RGB565 Pixel at (%zu, %zu): R=%d, G=%d, B=%d\n", x, y, r, g, b);
-// 
-//     return ESP_OK;
-// }
 
 
 esp_err_t get_FOVs(

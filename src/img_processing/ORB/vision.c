@@ -2,8 +2,9 @@
 
 #include "img_processing/ORB_defs.h"
 
-
-#define TAG "my_vision"
+#ifndef TAG
+    #define TAG "my_vision"
+#endif
 
 static uint8_t fast9_threshold = START_THRESHOLD;
 #define BALLANCE_COEF   1.3

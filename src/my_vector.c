@@ -2,7 +2,9 @@
 #include "img_processing/camera.h"
 
 
-#define TAG "my_vector"
+#ifndef TAG
+    #define TAG "my_vector"
+#endif
 
 #define INIT_CAPACITY 4
 

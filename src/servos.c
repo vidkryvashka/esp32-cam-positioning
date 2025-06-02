@@ -1,8 +1,9 @@
 #include "my_servos.h"
 #include "iot_servo.h"
 
-#define TAG "my_servos"
-
+#ifndef TAG
+    #define TAG "my_servos"
+#endif
 
 #define SERVO_PLUG_PIN  255
 #define SERVO_PAN_PIN   14

@@ -3,7 +3,7 @@
 #include "img_processing/photographer.h"
 
 #ifndef TAG
-#define TAG "my_main"
+    #define TAG "my_main"
 #endif
 
 
