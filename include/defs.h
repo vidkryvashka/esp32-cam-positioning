@@ -18,11 +18,10 @@
 //     MODE_FIND_SUN,
 //     MODE_FAST9
 // } analisis_modes;
-
 #define MODE_FIND_SUN   0
 #define MODE_FAST9      1
 
-#define ANALISIS_MODE MODE_FAST9
+#define ANALISIS_MODE MODE_FIND_SUN
 
 #define MEMORY_LOG_PROBABILITY_DIVIDER 7
 

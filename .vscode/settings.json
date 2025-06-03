@@ -38,7 +38,9 @@
         "recognizer.h": "c",
         "operating_with_fb.h": "c",
         "servos.h": "c",
-        "orb_defs.h": "c"
+        "orb_defs.h": "c",
+        "iot_servo.h": "c",
+        "my_servos.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

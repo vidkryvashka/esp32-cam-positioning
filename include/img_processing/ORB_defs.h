@@ -6,7 +6,8 @@
 #include "img_processing/camera.h"
 
 #define START_THRESHOLD 70
-#define KEYPOINTS_MAX_COUNT 32
+#define MIN_THRESHOLD 20
+#define KEYPOINTS_MAX_COUNT 64
 #define BRIEF_SIZE 256
 #define PATCH_SIZE 31
 #define SIGMA 5

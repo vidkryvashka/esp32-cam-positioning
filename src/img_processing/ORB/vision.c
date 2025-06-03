@@ -2,30 +2,10 @@
 
 #include "img_processing/ORB_defs.h"
 
-#ifndef TAG
-    #define TAG "my_vision"
-#endif
+#define TAG "my_vision"
 
 static uint8_t fast9_threshold = START_THRESHOLD;
 #define BALLANCE_COEF   1.3
-
-
-// static void paint(
-//     uint8_t *im1,
-//     uint8_t *im3,
-//     vector_t *c,
-//     uint16_t w,
-//     uint16_t h
-// ) {
-//     for (size_t i = 0; i < w * h; ++i)
-//         im1[i] = im1[i] * SAVIMG_IMAGE_DIM_COEF;
-// 
-//     for (size_t i = 0; i < c->size; ++i) {
-//         pixel_coord_t *p = (pixel_coord_t *)vector_get(c, i);
-//         if (p->x < w && p->y < h)
-//             im1[w * p->y + p->x] = 255;
-//     }
-// }
 
 
 // esp_err_t orb(
@@ -48,7 +28,8 @@ static esp_err_t balance_fast9(
         fast9(fb1, keypoints, fast9_threshold);
         if (keypoints->size > KEYPOINTS_MAX_COUNT)
             fast9_threshold *= BALLANCE_COEF;
-        else {
+        // else if (keypoints->size < KEYPOINTS_MAX_COUNT / 2) {
+        else if (keypoints->size < KEYPOINTS_MAX_COUNT) {
             fast9_threshold /= BALLANCE_COEF;
             break;
         }

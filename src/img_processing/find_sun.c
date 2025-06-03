@@ -3,9 +3,7 @@
 #include "img_processing/find_sun.h"
 #include "my_vector.h"
 
-#ifndef TAG
-    #define TAG "my_find_sun"
-#endif
+#define TAG "my_find_sun"
 
 
 #define STD_BRIGHTEST_PIXELS_COUNT 16
@@ -66,7 +64,7 @@ static esp_err_t find_max_brightness_pixels(
             uint8_t brightness = 0;
 
 #if PIXFORMAT_CHOISE == PIXFORMAT_GRAYSCALE
-            brightness = (uint8_t *)frame->buf[index];
+            brightness = ((uint8_t *)frame->buf)[index];
 #elif PIXFORMAT_CHOISE == PIXFORMAT_RGB565
             uint16_t pixel = (uint16_t *)frame->buf[index];
             uint8_t r = (pixel >> 11) & 0x1F;

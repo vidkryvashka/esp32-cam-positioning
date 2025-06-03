@@ -139,7 +139,7 @@ function drawCoords(metadata) {
     return;
   }
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = 'red';
+  ctx.fillStyle = 'yellow';
   metadata.coords.forEach(coord => {
     if (coord && typeof coord.x === 'number' && typeof coord.y === 'number') {
       ctx.beginPath();
