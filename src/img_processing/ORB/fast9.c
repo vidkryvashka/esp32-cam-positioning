@@ -2,9 +2,7 @@
  * @brief took from opencv and cleared from dependencies
  */
 
-#ifndef TAG
-    #define TAG "ORB_FAST"
-#endif
+#define TAG "ORB_FAST"
  
 #include "img_processing/ORB_defs.h"
 

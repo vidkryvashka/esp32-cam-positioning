@@ -1,8 +1,6 @@
 #include "img_processing/camera.h"
 
-#ifndef TAG
-    #define TAG "my_operating_with_fb"
-#endif
+#define TAG "my_operating_with_fb"
 
 camera_fb_t* camera_fb_create(
     const uint16_t width,
@@ -14,7 +12,7 @@ camera_fb_t* camera_fb_create(
         return NULL;
     }
 
-    const uint8_t pixel_size = 2; // RGB565
+    const uint8_t pixel_size = (format == PIXFORMAT_GRAYSCALE) ? 1 : 2;     // PIXFORMAT_RGB565 pixelsize 2 (uint16_t)
     const size_t buffer_size = width * height * pixel_size;
 
     fb->buf = (uint8_t*)malloc(buffer_size);

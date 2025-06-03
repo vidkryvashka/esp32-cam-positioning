@@ -1,10 +1,9 @@
 #include "defs.h"
 #include "server/webserver.h"
 #include "img_processing/photographer.h"
+#include "my_servos.h"
 
-#ifndef TAG
-    #define TAG "my_main"
-#endif
+#define TAG "my_main"
 
 
 
@@ -15,4 +14,5 @@ void app_main(void)
     init_camera();
     run_photographer();
     server_up();
+    // run_servo_manager();
 }

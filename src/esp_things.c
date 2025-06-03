@@ -8,9 +8,7 @@
 
 #include "defs.h"
 
-#ifndef TAG
 #define TAG "my_esp_things"
-#endif
 
 // support IDF 5.x
 #ifndef portTICK_RATE_MS
@@ -43,10 +41,6 @@ esp_err_t init_esp_things(void)
     esp_err_t gpio_err = init_gpio();
     ESP_ERROR_CHECK(gpio_err);
 
-    esp_err_t servos_err = init_my_servos();
-    ESP_ERROR_CHECK(servos_err);
-    // defer deinit_my_servos();
-
     // Initialize NVS
     esp_err_t nvs_flash_err = nvs_flash_init();
     if (nvs_flash_err == ESP_ERR_NVS_NO_FREE_PAGES || nvs_flash_err == ESP_ERR_NVS_NEW_VERSION_FOUND)
@@ -56,7 +50,10 @@ esp_err_t init_esp_things(void)
     }
     ESP_ERROR_CHECK(nvs_flash_err);
 
-    esp_err_t err = gpio_err && nvs_flash_err;
+    esp_err_t servos_err = init_my_servos();
+    ESP_ERROR_CHECK(servos_err);
+
+    esp_err_t err = gpio_err & nvs_flash_err & servos_err;
 
     return err;
 }

@@ -13,9 +13,7 @@
     #include "img_processing/find_sun.h"
 #endif
 
-#ifndef TAG
-    #define TAG "my_photographer"
-#endif
+#define TAG "my_photographer"
 
 
 volatile bool pause_photographer = 0;   // extern declared in img_processing/photographer.h, used in webserver.c
@@ -55,7 +53,7 @@ camera_fb_t* decorate_fragment(
 
 static esp_err_t take_analize_photo()
 {
-    if (xSemaphoreTake(frame_mutex, pdMS_TO_TICKS(PHOTOGRAPHER_DELAY_MS * 10)) != pdTRUE) {
+    if (xSemaphoreTake(frame_mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
         ESP_LOGE(TAG, "take_photo() failed to take frame_mutex ");
         return ESP_FAIL;
     }

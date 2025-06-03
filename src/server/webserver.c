@@ -24,9 +24,8 @@
     #include "img_processing/find_sun.h"
 #endif
 
-#ifndef TAG
-    #define TAG "my_webserver"
-#endif
+
+#define TAG "my_webserver"
 
 
 static uint16_t sending_period = PHOTOGRAPHER_DELAY_MS; // 1000;  // ms
@@ -115,7 +114,7 @@ static void send_image_task(
             continue;
         }
 
-        if (xSemaphoreTake(frame_mutex, pdMS_TO_TICKS(2000)) != pdTRUE) {
+        if (xSemaphoreTake(frame_mutex, pdMS_TO_TICKS(5000)) != pdTRUE) {
             ESP_LOGE(TAG, "send_image_task failed to take frame_mutex");
             vTaskDelay(pdMS_TO_TICKS(1000));
             continue;
@@ -204,6 +203,18 @@ static esp_err_t pause_handler(httpd_req_t *req)
 }
 
 
+
+void servo_actions()
+{
+    uint8_t pan_angle = my_servo_get_angle(SERVO_PAN_CH);
+    uint8_t tilt_angle = my_servo_get_angle(SERVO_TILT_CH);
+    ESP_LOGI(TAG, "servos angles pan: %d tilt: %d ", pan_angle, tilt_angle);
+    
+    my_servo_set_angle(SERVO_PAN_CH, pan_angle - 10);
+
+    // ESP_LOGI(TAG, "afrer setting angle ");
+}
+
 static esp_err_t rect_handler(httpd_req_t *req)
 {
     char buf[128];
@@ -229,8 +240,10 @@ static esp_err_t rect_handler(httpd_req_t *req)
         frame2send = decorate_fragment(&rect_coords);
     xSemaphoreGive(frame_mutex);
 
-    // servo_actions();
     log_memory(xPortGetCoreID());
+    servo_actions();
+
+    ESP_LOGI(TAG, "\t-- afrer servo_actions ");
 
     return ESP_OK;
 }

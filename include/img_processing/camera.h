@@ -40,7 +40,7 @@ extern camera_fb_t *current_frame;  // initiated in photographer.c, used in take
 
 
 /**
- * @brief holds small coords uint8_t
+ * @brief holds x y coords
  */
 typedef struct {
     uint16_t x;
@@ -48,6 +48,10 @@ typedef struct {
 } pixel_coord_t;
 
 
+/**
+ * @brief what's unclear ?
+ * 
+ */
 typedef struct {
     pixel_coord_t top_left;
     uint16_t width;
@@ -59,7 +63,7 @@ typedef struct {
  * @brief calculates X Y degrees from point to center of frame
  * 
  * @param coord input point
- * @param fovs2write output int8_t array must be size 2
+ * @param FOVs to write - output float array must be size 2
  * @return errors
  */
 esp_err_t get_FOVs(
@@ -68,7 +72,14 @@ esp_err_t get_FOVs(
 );
 
 
-
+/**
+ * @brief mallocs and initiates camera_fb_t frame by parameters
+ * 
+ * @param width 
+ * @param height 
+ * @param format PIXFORMAT_(GRAYSCALE | RGB565)
+ * @return camera_fb_t* 
+ */
 camera_fb_t* camera_fb_create(
     const uint16_t width,
     const uint16_t height,
@@ -76,16 +87,34 @@ camera_fb_t* camera_fb_create(
 );
 
 
+/**
+ * @brief mallocs and initiates camera_fb_t frame by src fields
+ * 
+ * @param src camera_fb_t source
+ */
 camera_fb_t* camera_fb_copy(
     const camera_fb_t* src
 );
 
 
+/**
+ * @brief destructs self created camera_fb_t, don't use to esp_camera_fb_get() created fbs, they should be returned
+ * 
+ * @param fb to free
+ */
 void camera_fb_free(
     camera_fb_t* fb
 );
 
 
+/**
+ * @brief writes cropped camera_fb_t into dest by rectangle coords & form of src
+ * 
+ * @param dest 
+ * @param src 
+ * @param rect coords & form
+ * @return esp_err_t 
+ */
 esp_err_t camera_fb_crop(
     camera_fb_t *dest,
     const camera_fb_t *src,

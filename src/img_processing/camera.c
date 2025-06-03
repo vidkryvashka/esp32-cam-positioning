@@ -14,9 +14,7 @@
 #include "defs.h"
 #include "img_processing/camera.h"
 
-#ifndef TAG
-    #define TAG "my_camera"
-#endif
+#define TAG "my_camera"
 
 
 static camera_config_t camera_config = {
@@ -114,8 +112,8 @@ esp_err_t get_FOVs(
 
     const float tan26_degrees = 0.4877f;
 
-    FOVs[0] = atanf((float)diff_x / (float)frame_width / (float)2 / tan26_degrees) * (float)90 / M_PI_2;
-    FOVs[1] = atanf((float)diff_y / (float)frame_height / (float)2 / tan26_degrees) * (float)90 / M_PI_2;
+    FOVs[0] = atanf((double)diff_x / (double)frame_width / (double)2 / tan26_degrees) * (double)90 / M_PI_2;
+    FOVs[1] = atanf((double)diff_y / (double)frame_height / (double)2 / tan26_degrees) * (double)90 / M_PI_2;
 
     ESP_LOGI("", "FOVs x: %.2f y: %.2f", FOVs[0], FOVs[1]);
 

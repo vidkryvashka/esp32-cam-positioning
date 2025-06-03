@@ -1,8 +1,7 @@
 #include "server/wifi.h"
 
-#ifndef TAG
-    #define TAG "my_wifi"
-#endif
+
+#define TAG "my_wifi"
 
 
 #if !CONFIG_ESP_WIFI_SOFTAP_ENABLE
