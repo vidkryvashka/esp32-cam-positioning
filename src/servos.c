@@ -4,7 +4,7 @@
 
 #include "my_servos.h"
 
-#define TAG "MyServos"
+#define TAG "my_servos"
 
 #define SERVO_PAN_GPIO  GPIO_NUM_14
 #define SERVO_TILT_GPIO GPIO_NUM_15
@@ -13,6 +13,8 @@
 
 static bool is_initialized = false;
 
+static uint8_t curr_pan_angle = 90;
+static uint8_t curr_tilt_angle = 90;
 
 static uint32_t angle2duty(
     uint8_t angle
@@ -23,37 +25,40 @@ static uint32_t angle2duty(
     // Map angle (0° -> 0.5ms, 180° -> 2.5ms)
     double pulse_width = 0.5 + ((double)angle / 180.0) * 2.0;
     // Convert pulse width to duty cycle (12-bit resolution, 50Hz)
-    uint32_t duty = pulse_width / 20.0 * (1 << LEDC_TIMER_12_BIT);
+    uint32_t duty = (pulse_width / 20.0) * 4096;
 
     return duty;
 }
 
-static uint8_t duty2angle(
-    uint32_t duty
-) {
-    if (duty > 1 << LEDC_TIMER_12_BIT) {
-        ESP_LOGE(TAG, "\t--- duty2angle got duty %lu so it's %d", duty, (1 << LEDC_TIMER_12_BIT));
-        duty = 1 << LEDC_TIMER_12_BIT;
-    }
-
-    double pulse_width = duty / (1 << LEDC_TIMER_12_BIT) * 20.0;
-    uint8_t angle = (pulse_width - 0.5) / 2.0  * 180.0;
-
-    if (angle > 180) {
-        ESP_LOGE(TAG, "duty2angle made angle %d ", angle);
-        angle = 180;
-    }
-
-    return angle;
-}
+// static uint8_t duty2angle(
+//     uint32_t duty
+// ) {
+//     if (duty > 4095) {
+//         ESP_LOGE(TAG, "\t--- duty2angle got wrong duty %lu so it's 4095", duty);
+//         // duty = 1 << LEDC_TIMER_12_BIT;
+//         return 180;
+//     }
+// 
+//     double pulse_width = (double)duty / 4096.0 * 20.0;
+//     uint8_t angle = (pulse_width - 0.5) * 180.0 / 2.0;
+// 
+//     if (angle > 180) {
+//         ESP_LOGE(TAG, "duty2angle made angle %d duty %lu, now 180° ", angle, duty);
+//         angle = 180;
+//     }
+// 
+//     return angle;
+// }
 
 
 esp_err_t init_my_servos()
 {
     esp_err_t ret = ESP_OK;
 
+    servo_queue = xQueueCreate(SERVO_QUEUE_LEN, sizeof(angles_diff_t));
+
     if (is_initialized) {
-        ESP_LOGW(TAG, "Servos already initialized");
+        ESP_LOGW(TAG, "Servos already initialized ");
         return ESP_OK;
     }
 
@@ -74,7 +79,7 @@ esp_err_t init_my_servos()
     // Configure PWM channel for pan servo (channel 0, GPIO 14)
     ledc_channel_config_t pan_channel = {
         .channel = SERVO_PAN_CH,
-        .duty = angle2duty(0),
+        .duty = angle2duty(curr_pan_angle),
         .gpio_num = SERVO_PAN_GPIO,
         .speed_mode = LEDC_LOW_SPEED_MODE,
         .hpoint = 0,
@@ -89,7 +94,7 @@ esp_err_t init_my_servos()
     // Configure PWM channel for tilt servo (channel 1, GPIO 15)
     ledc_channel_config_t tilt_channel = {
         .channel = SERVO_TILT_CH,
-        .duty = angle2duty(0),
+        .duty = angle2duty(curr_tilt_angle),
         .gpio_num = SERVO_TILT_GPIO,
         .speed_mode = LEDC_LOW_SPEED_MODE,
         .hpoint = 0,
@@ -136,38 +141,40 @@ esp_err_t deinit_my_servos()
 }
 
 
-uint8_t my_servo_get_angle(
-    uint8_t servo_chan
-) {
-    if (!is_initialized) {
-        ESP_LOGE(TAG, "Servos not initialized ");
-        return 0.0f;
-    }
+// uint8_t my_servo_get_angle(
+//     uint8_t servo_chan
+// ) {
+//     if (!is_initialized) {
+//         ESP_LOGE(TAG, "Servos not initialized ");
+//         return 0.0f;
+//     }
+// 
+//     if (servo_chan != SERVO_PAN_CH && servo_chan != SERVO_TILT_CH) {
+//         ESP_LOGE(TAG, "Invalid servo channel: %d ", servo_chan);
+//         return 0.0f;
+//     }
+// 
+//     uint32_t duty = ledc_get_duty(LEDC_LOW_SPEED_MODE, servo_chan);
+// 
+//     return duty2angle(duty);
+// }
 
-    if (servo_chan != SERVO_PAN_CH && servo_chan != SERVO_TILT_CH) {
-        ESP_LOGE(TAG, "Invalid servo channel: %d ", servo_chan);
-        return 0.0f;
-    }
-
-    uint32_t duty = ledc_get_duty(LEDC_LOW_SPEED_MODE, servo_chan);
-
-    return duty2angle(duty);
-}
 
 
-
-static esp_err_t karusel(uint8_t servo_chan) {
+static esp_err_t karusel() {
     const uint8_t angle_step = 1;
     const uint16_t period_ms = 200;
     for (uint8_t angle = 0 ; angle <= 180 ; angle += angle_step) {
-        ESP_LOGI(TAG, "Moving to %d degrees ", angle);
-        ledc_set_duty_and_update(LEDC_LOW_SPEED_MODE, servo_chan, angle2duty(angle), 0);
+        ESP_LOGI(TAG, "Moving to %d° degrees ", angle);
+        ledc_set_duty_and_update(LEDC_LOW_SPEED_MODE, SERVO_PAN_CH, angle2duty(angle), 0);
+        ledc_set_duty_and_update(LEDC_LOW_SPEED_MODE, SERVO_TILT_CH, angle2duty(angle), 0);
 
         vTaskDelay(pdMS_TO_TICKS(period_ms));
     }
     for (uint8_t angle = 180 - angle_step ; angle >= angle_step ; angle -= angle_step) {
-        ESP_LOGI(TAG, "Moving to %d degrees ", angle);
-        ledc_set_duty_and_update(LEDC_LOW_SPEED_MODE, servo_chan, angle2duty(angle), 0);
+        ESP_LOGI(TAG, "Moving to %d° degrees ", angle);
+        ledc_set_duty_and_update(LEDC_LOW_SPEED_MODE, SERVO_PAN_CH, angle2duty(angle), 0);
+        ledc_set_duty_and_update(LEDC_LOW_SPEED_MODE, SERVO_TILT_CH, angle2duty(angle), 0);
 
         vTaskDelay(pdMS_TO_TICKS(period_ms));
     }
@@ -176,27 +183,42 @@ static esp_err_t karusel(uint8_t servo_chan) {
 }
 
 
-esp_err_t my_servo_set_angle(
-    uint8_t servo_chan, uint8_t angle
+static esp_err_t my_servos_change_angles(
+    const angles_diff_t *angles_diff
 ) {
     if (!is_initialized) {
         ESP_LOGE(TAG, "Servos not initialized ");
         return ESP_ERR_INVALID_STATE;
     }
 
-    if (servo_chan != SERVO_PAN_CH && servo_chan != SERVO_TILT_CH) {
-        ESP_LOGE(TAG, "Invalid servo channel: %d ", servo_chan);
-        return ESP_ERR_INVALID_ARG;
+    // uint8_t curr_pan_angle = duty2angle(ledc_get_duty(LEDC_LOW_SPEED_MODE, SERVO_TILT_CH));
+    // uint8_t curr_tilt_angle = duty2angle(ledc_get_duty(LEDC_LOW_SPEED_MODE, SERVO_TILT_CH));
+
+    int16_t target_pan_angle = curr_pan_angle + angles_diff->pan;
+    int16_t target_tilt_angle = curr_tilt_angle + angles_diff->tilt;
+
+    if (target_pan_angle < SERVO_PAN_ANGLE_BOTTOM) {
+        ESP_LOGI(TAG, "my_servos_change_angle target pan angle too low ");
+        target_pan_angle = SERVO_PAN_ANGLE_BOTTOM;
+    }
+    if (target_pan_angle > SERVO_PAN_ANGLE_TOP) {
+        ESP_LOGI(TAG, "my_servos_change_angle target pan angle too big ");
+        target_pan_angle = SERVO_PAN_ANGLE_TOP;
+    }
+    if (target_pan_angle < SERVO_TILT_ANGLE_BOTTOM) {
+        ESP_LOGI(TAG, "my_servos_change_angle target tilt angle too low ");
+        target_pan_angle = SERVO_TILT_ANGLE_BOTTOM;
+    }
+    if (target_pan_angle > SERVO_TILT_ANGLE_TOP) {
+        ESP_LOGI(TAG, "my_servos_change_angle target tilt angle too big ");
+        target_pan_angle = SERVO_TILT_ANGLE_TOP;
     }
 
-    uint32_t duty = angle2duty(angle);
-    // ledc_set_duty_and_update(LEDC_LOW_SPEED_MODE, servo_chan, duty, 0);  // : target_duty argument is invalid
+    ledc_set_duty_and_update(LEDC_LOW_SPEED_MODE, SERVO_PAN_CH, angle2duty(target_pan_angle), 0);  // : target_duty argument is invalid
+    ledc_set_duty_and_update(LEDC_LOW_SPEED_MODE, SERVO_TILT_CH, angle2duty(target_tilt_angle), 0);  // : target_duty argument is invalid
 
-    karusel(SERVO_PAN_CH);
+    ESP_LOGI(TAG, "Set servo pan -> %d° tilt -> %d° ", target_pan_angle, target_tilt_angle);
 
-    ESP_LOGI(TAG, "Set servo channel %d to %d degrees, duty: %lu ", servo_chan, angle, duty);
-
-    vTaskDelay(pdMS_TO_TICKS(1000));
     return ESP_OK;
 }
 
@@ -204,20 +226,27 @@ esp_err_t my_servo_set_angle(
 static void servo_manager_task(
     void *pvParameters
 ) {
+    angles_diff_t angles_diff = {0,0};
+
     while (1) {
-        karusel(SERVO_PAN_CH);
+        if (xQueueReceive(servo_queue, (void *)&angles_diff, 0) == pdTRUE) {
+            ESP_LOGI(TAG, "\t\t--- got angles_diff %d° %d° ", angles_diff.pan, angles_diff.tilt);
+            my_servos_change_angles(&angles_diff);
+        ;
+            // uint8_t pan_angle = my_servo_get_angle(SERVO_PAN_CH);
+            // uint8_t tilt_angle = my_servo_get_angle(SERVO_TILT_CH);
+            // ESP_LOGI(TAG, "\t\t-- servos angles pan: %d° tilt: %d° ", pan_angle, tilt_angle);
+        }
+
+        // karusel();
         
-        vTaskDelay(pdMS_TO_TICKS(2000));
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 
 
-
-
 esp_err_t run_servo_manager()
 {
-    // defer deinit_my_servos();
-
     esp_err_t task_created = xTaskCreatePinnedToCore(
                     &servo_manager_task,
                     "servo_manager_task",

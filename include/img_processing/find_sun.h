@@ -6,7 +6,7 @@
 
 
 /**
- * @brief allocs and needs to free .coords
+ * @brief pixel cloud with center
  */
 typedef struct {
     vector_t *coords;
@@ -23,7 +23,9 @@ typedef struct {
  */
 esp_err_t mark_sun(
     max_brightness_pixels_t *mbp,
-    const camera_fb_t *frame
+    const camera_fb_t *frame,
+    angles_diff_t *angles_diff
+    // float angles[2]
 );
 
 

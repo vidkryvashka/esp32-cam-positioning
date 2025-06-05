@@ -108,15 +108,22 @@ static esp_err_t find_max_brightness_pixels(
 
 esp_err_t mark_sun(
     max_brightness_pixels_t *mbp,
-    const camera_fb_t *frame
+    const camera_fb_t *frame,
+    angles_diff_t *angles_diff
+    // float angles[2]
 ) {
     esp_err_t err = find_max_brightness_pixels(mbp, frame);
-    // if (!err) {
-    //     return err;
-    // }
+    if (err) {
+        ESP_LOGE(TAG, "find_max_brightness_pixels err %d ", err);
+        return err;
+    }
 
-    // float FOVs[2] = {0, 0};
-    // get_FOVs(&mbp->center_coord, FOVs);
+    if (angles_diff) {
+        // float angles[2] = {0, 0};
+        calculate_angles_diff(&mbp->center_coord, angles_diff);
+    } else {
+        ESP_LOGE(TAG, "mark_sun no angles_diff ");
+    }
     
-    return err;;
+    return ESP_OK;
 }

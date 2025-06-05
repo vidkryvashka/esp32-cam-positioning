@@ -203,16 +203,20 @@ static esp_err_t pause_handler(httpd_req_t *req)
 }
 
 
+QueueHandle_t servo_queue;
 
 void servo_actions()
 {
-    uint8_t pan_angle = my_servo_get_angle(SERVO_PAN_CH);
-    uint8_t tilt_angle = my_servo_get_angle(SERVO_TILT_CH);
-    ESP_LOGI(TAG, "servos angles pan: %d tilt: %d ", pan_angle, tilt_angle);
-    
-    my_servo_set_angle(SERVO_PAN_CH, pan_angle - 10);
+    // uint8_t pan_angle = my_servo_get_angle(SERVO_PAN_CH);
+    // uint8_t tilt_angle = my_servo_get_angle(SERVO_TILT_CH);
+    // ESP_LOGI(TAG, "servos angles pan: %d tilt: %d ", pan_angle, tilt_angle);
 
-    // ESP_LOGI(TAG, "afrer setting angle ");
+    angles_diff_t angles_diff = {-4, 5};
+    if (xQueueSend(servo_queue, (void *)&angles_diff, 10) != pdTRUE) {
+        ESP_LOGE(TAG, "servo_actions couldn't xQueueSend, queue fill ");
+    }
+
+    ESP_LOGI(TAG, "servo_actions end ");
 }
 
 static esp_err_t rect_handler(httpd_req_t *req)
@@ -237,13 +241,12 @@ static esp_err_t rect_handler(httpd_req_t *req)
         ESP_LOGE(TAG, "Failed to take frame_mutex on fragment");
         return ESP_FAIL;
     } else
-        frame2send = decorate_fragment(&rect_coords);
+        frame2send = operate_fragment(&rect_coords);
     xSemaphoreGive(frame_mutex);
+    pause_photographer = 0;
 
     log_memory(xPortGetCoreID());
     servo_actions();
-
-    ESP_LOGI(TAG, "\t-- afrer servo_actions ");
 
     return ESP_OK;
 }
