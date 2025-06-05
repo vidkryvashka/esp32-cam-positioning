@@ -40,7 +40,8 @@
         "servos.h": "c",
         "orb_defs.h": "c",
         "iot_servo.h": "c",
-        "my_servos.h": "c"
+        "my_servos.h": "c",
+        "queue.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

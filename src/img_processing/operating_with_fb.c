@@ -55,44 +55,42 @@ void camera_fb_free(
 ) {
     if (fb == NULL)
         return;
-    if (fb->buf != NULL)
+    if (fb->buf != NULL) {
         free(fb->buf);
+        fb->buf = NULL;
+    }
     free(fb);
 }
 
 
-esp_err_t camera_fb_crop(
-    camera_fb_t *dest,
+camera_fb_t* camera_fb_crop(
     const camera_fb_t *src,
     const rectangle_coords_t *rect
 ) {
     if (src == NULL || rect == NULL) {
-        return ESP_FAIL;
+        return NULL;
     }
 
-    uint8_t top_left_x = rect->top_left.x;
-    uint8_t top_left_y = rect->top_left.y;
-    uint8_t crop_width = rect->width;
-    uint8_t crop_height = rect->height;
+    uint16_t top_left_x = rect->top_left.x;
+    uint16_t top_left_y = rect->top_left.y;
 
-    if (top_left_x + crop_width > src->width || top_left_y + crop_height > src->height) {
-        return ESP_FAIL; // Помилка: прямокутник виходить за межі зображення
+    if (top_left_x + rect->width > src->width || top_left_y + rect->height > src->height) {
+        return NULL;
     }
 
-    size_t pixel_size = 2; // RGB565
-    // size_t src_row_size = src->width * pixel_size;
-    size_t dest_row_size = crop_width * pixel_size;
+    size_t pixel_size = (src->format == PIXFORMAT_GRAYSCALE) ? 1 : 2;   // PIXFORMAT_RGB565 pixelsize 2 (uint16_t)
+    size_t dest_row_size = rect->width * pixel_size;
+    camera_fb_t *dest = camera_fb_create(rect->width, rect->height, current_frame->format);
 
-    // Копіюємо пікселі
-    for (size_t y = top_left_y; y < top_left_y + crop_height; ++y) {
-        size_t src_index = (y * src->width + top_left_x) * pixel_size;    // Початок рядка у вихідному буфері
-        size_t dest_index = (y - top_left_y) * dest_row_size;             // Початок рядка у новому буфері
+    for (size_t y = top_left_y; y < top_left_y + rect->height; ++y) {
+        size_t src_index = (y * src->width + top_left_x) * pixel_size;
+        size_t dest_index = (y - top_left_y) * dest_row_size;
         memcpy(dest->buf + dest_index, src->buf + src_index, dest_row_size);
     }
 
-    dest->timestamp = src->timestamp;
-    // dest->timestamp = (struct timeval) {0, 0};
+    // dest->timestamp = src->timestamp;
+    dest->timestamp = (struct timeval) {0, 0};
     // bzero(dest->timestamp, sizeof(dest->timestamp));
 
-    return ESP_OK;
+    return dest;
 }

@@ -98,24 +98,24 @@ esp_err_t init_camera(void)
 }
 
 
-esp_err_t get_FOVs(
+esp_err_t calculate_angles_diff(
     const pixel_coord_t *coord,
-    float FOVs[2]
+    angles_diff_t *angles_diff
 ) {
     if (coord->x >= frame_width || coord->y >= frame_height) {
-        ESP_LOGE(TAG, "get_FOVs got strange coord");
+        ESP_LOGE(TAG, "get_angles got strange coord");
         return ESP_FAIL;
     }
 
-    int16_t diff_x = frame_width /2 - coord->x;
+    int16_t diff_x = frame_width / 2 - coord->x;
     int16_t diff_y = frame_height / 2 - coord->y;
 
     const float tan26_degrees = 0.4877f;
 
-    FOVs[0] = atanf((double)diff_x / (double)frame_width / (double)2 / tan26_degrees) * (double)90 / M_PI_2;
-    FOVs[1] = atanf((double)diff_y / (double)frame_height / (double)2 / tan26_degrees) * (double)90 / M_PI_2;
+    angles_diff->pan = (int16_t)(atanf((double)diff_x / (double)frame_width / (double)2 / tan26_degrees) * (double)90 / -M_PI_2); // mirroring
+    angles_diff->tilt = (int16_t)(atanf((double)diff_y / (double)frame_height / (double)2 / tan26_degrees) * (double)90 / M_PI_2);
 
-    ESP_LOGI("", "FOVs x: %.2f y: %.2f", FOVs[0], FOVs[1]);
+    ESP_LOGI(TAG, "angles_diff x: %d° y: %df°", angles_diff->pan, angles_diff->tilt);
 
     return ESP_OK;
 }

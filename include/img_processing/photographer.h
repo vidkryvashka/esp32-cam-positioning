@@ -21,13 +21,22 @@ extern volatile bool pause_photographer; // initiated in photographer.c, used in
 typedef struct {
 #if ANALISIS_MODE == MODE_FIND_SUN
     max_brightness_pixels_t mbp;
+    // keypoints_t keypoints;
 #elif ANALISIS_MODE == MODE_FAST9
+    keypoints_t keypoints;
     vector_t *keypoints;
 #endif
     bool need2ORB;
 } keypoints_shell_t;
 
+
+/**
+ * @brief to private variable in photographer.c
+ * 
+ * @return keypoints_shell_t* 
+ */
 keypoints_shell_t* get_keypoints_shell_reference();
+
 
 /**
  * @brief writes cropped current_frame into itself by rect_coords scema, changes translation unit global variables
@@ -35,9 +44,10 @@ keypoints_shell_t* get_keypoints_shell_reference();
  * @param rect_coords 
  * @return camera_fb_t* pointer to fragment
  */
-camera_fb_t* decorate_fragment(
+camera_fb_t* operate_fragment(
     const rectangle_coords_t *rect_coords
 );
+
 
 esp_err_t run_photographer();
 

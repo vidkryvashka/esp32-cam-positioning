@@ -42,6 +42,15 @@ void led_blink(float periods, uint8_t count);
 
 
 /**
+ * @brief to send by servo_queue and controll servos
+ */
+typedef struct {
+    int16_t pan;
+    int16_t tilt;
+} angles_diff_t;
+
+
+/**
  * @brief logs heap memory info
  * 
  * @param core_id

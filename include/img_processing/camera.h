@@ -20,6 +20,7 @@
 #include "img_converters.h"
 
 #include "defs.h"
+#include "my_vector.h"
 
 #define BOARD_ESP32CAM_AITHINKER
 
@@ -47,6 +48,14 @@ typedef struct {
     uint16_t y;
 } pixel_coord_t;
 
+/**
+ * @brief pixel cloud with center
+ */
+typedef struct {
+    vector_t *coords;
+    pixel_coord_t center_coord;
+} pixels_cloud_t;
+
 
 /**
  * @brief what's unclear ?
@@ -58,17 +67,18 @@ typedef struct {
     uint16_t height;
 } rectangle_coords_t;
 
+#define ANGLE_THRESHOLD 10 // degrees ignore
 
 /**
  * @brief calculates X Y degrees from point to center of frame
  * 
  * @param coord input point
- * @param FOVs to write - output float array must be size 2
+ * @param angles to write - output float array must be size 2
  * @return errors
  */
-esp_err_t get_FOVs(
+esp_err_t calculate_angles_diff(
     const pixel_coord_t *sun_coord,
-    float FOVs[2]
+    angles_diff_t *angles_diff
 );
 
 
@@ -88,9 +98,11 @@ camera_fb_t* camera_fb_create(
 
 
 /**
- * @brief mallocs and initiates camera_fb_t frame by src fields
+ * @brief allocs and initiates camera_fb_t frame by src fields
  * 
  * @param src camera_fb_t source
+ * 
+ * @return camera_bf_t* alloced copy
  */
 camera_fb_t* camera_fb_copy(
     const camera_fb_t* src
@@ -108,15 +120,13 @@ void camera_fb_free(
 
 
 /**
- * @brief writes cropped camera_fb_t into dest by rectangle coords & form of src
+ * @brief allocs and cropps by rectangle coords and form from src camera_fb_t*
  * 
- * @param dest 
- * @param src 
- * @param rect coords & form
- * @return esp_err_t 
+ * @param src image to crop
+ * @param rect coords and form
+ * @return camera_fb_t * alloced cropped frame
  */
-esp_err_t camera_fb_crop(
-    camera_fb_t *dest,
+camera_fb_t* camera_fb_crop(
     const camera_fb_t *src,
     const rectangle_coords_t *rect
 );
