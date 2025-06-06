@@ -10,7 +10,7 @@
 vector_t* vector_create(
     size_t sizeof_element
 ) {
-    vector_t* vec = (vector_t *)malloc(sizeof(vector_t));
+    vector_t* vec = (vector_t *)heap_caps_malloc(sizeof(vector_t), MALLOC_CAP_SPIRAM);
     if (!vec) return NULL;
     
     vec->data = calloc(INIT_CAPACITY, sizeof_element);
@@ -36,7 +36,7 @@ esp_err_t vector_reserve(
         return ESP_FAIL;
     }
     
-    void *new_data = realloc(vec->data, new_capacity * vec->sizeof_element);
+    void *new_data = heap_caps_realloc(vec->data, new_capacity * vec->sizeof_element, MALLOC_CAP_SPIRAM);
     if (!new_data) {
         ESP_LOGE(TAG, "vector_reserve realloc lost data ");
         return ESP_FAIL;
@@ -157,7 +157,7 @@ esp_err_t vector_clear(
     vector_t *vec
 ) {
     if (vec) {
-        free(vec->data);
+        heap_caps_free(vec->data);
         vec->data = NULL;
         vec->size = 0;
         vec->capacity = 0;
@@ -173,8 +173,8 @@ esp_err_t vector_destroy(
     vector_t *vec
 ) {
     if (vec) {
-        free(vec->data);
-        free(vec);
+        heap_caps_free(vec->data);
+        heap_caps_free(vec);
         return ESP_OK;
     } else {
         ESP_LOGE(TAG, "no vec\n");

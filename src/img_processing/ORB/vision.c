@@ -50,9 +50,9 @@ int8_t find_fragment(
         ESP_LOGE(TAG, "expected PIXFORMAT_GRAYSCALE");
     }
 
-    // uint8_t *img3_target = fragment->buf; // (uint8_t *)malloc(10000); // = loadBMP(&wt, &ht, argc > 1 ? argv[1] : DEFAULT_TARGET_IMG_PATH);
-    // uint8_t *img3_seek = frame->buf; // loadBMP(&ws, &hs, DEFAULT_SEEK_IMG_PATH);
-    // uint8_t *img1_seek = (uint8_t *)malloc(ws * hs * sizeof(uint8_t));
+    // uint8_t *img3_target = fragment->buf;
+    // uint8_t *img3_seek = frame->buf;
+    // uint8_t *img1_seek = (uint8_t *)heap_caps_malloc(ws * hs * sizeof(uint8_t));
     
     
     // orb(img3_target, img3_seek, img1_target, img1_seek, wt, ht, ws, hs);

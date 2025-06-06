@@ -67,7 +67,7 @@ typedef struct {
     uint16_t height;
 } rectangle_coords_t;
 
-#define ANGLE_THRESHOLD 10 // degrees ignore
+#define ANGLE_THRESHOLD 5   // degrees ignore
 
 /**
  * @brief calculates X Y degrees from point to center of frame

@@ -7,7 +7,7 @@ camera_fb_t* camera_fb_create(
     const uint16_t height,
     const pixformat_t format
 ) {
-    camera_fb_t* fb = (camera_fb_t*)malloc(sizeof(camera_fb_t));
+    camera_fb_t* fb = (camera_fb_t*)heap_caps_malloc(sizeof(camera_fb_t), MALLOC_CAP_SPIRAM);
     if (fb == NULL) {
         return NULL;
     }
@@ -15,9 +15,9 @@ camera_fb_t* camera_fb_create(
     const uint8_t pixel_size = (format == PIXFORMAT_GRAYSCALE) ? 1 : 2;     // PIXFORMAT_RGB565 pixelsize 2 (uint16_t)
     const size_t buffer_size = width * height * pixel_size;
 
-    fb->buf = (uint8_t*)malloc(buffer_size);
+    fb->buf = (uint8_t*)heap_caps_malloc(buffer_size, MALLOC_CAP_SPIRAM);
     if (fb->buf == NULL) {
-        free(fb);
+        heap_caps_free(fb);
         return NULL;
     }
 
@@ -56,10 +56,10 @@ void camera_fb_free(
     if (fb == NULL)
         return;
     if (fb->buf != NULL) {
-        free(fb->buf);
+        heap_caps_free(fb->buf);
         fb->buf = NULL;
     }
-    free(fb);
+    heap_caps_free(fb);
 }
 
 
