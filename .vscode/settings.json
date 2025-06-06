@@ -41,7 +41,9 @@
         "orb_defs.h": "c",
         "iot_servo.h": "c",
         "my_servos.h": "c",
-        "queue.h": "c"
+        "queue.h": "c",
+        "esp_heap_caps.h": "c",
+        "ledc.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

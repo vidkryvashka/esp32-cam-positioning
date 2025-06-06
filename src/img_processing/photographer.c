@@ -18,6 +18,7 @@
 volatile bool pause_photographer = 0;   // extern declared in img_processing/photographer.h, used in webserver.c
 volatile SemaphoreHandle_t frame_mutex;
 camera_fb_t *current_frame = NULL;      // extern declared in camera.h
+QueueHandle_t servo_queue;
 
 
 static keypoints_shell_t keypoints_shell;

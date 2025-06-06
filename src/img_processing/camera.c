@@ -112,8 +112,8 @@ esp_err_t calculate_angles_diff(
 
     const float tan26_degrees = 0.4877f;
 
-    angles_diff->pan = (int16_t)(atanf((double)diff_x / (double)frame_width / (double)2 / tan26_degrees) * (double)90 / -M_PI_2); // mirroring
-    angles_diff->tilt = (int16_t)(atanf((double)diff_y / (double)frame_height / (double)2 / tan26_degrees) * (double)90 / M_PI_2);
+    angles_diff->pan = (int16_t)(atanf((double)diff_x / (double)frame_width / (double)2 / tan26_degrees) * (double)90 / M_PI_2); // mirroring
+    angles_diff->tilt = (int16_t)(atanf((double)diff_y / (double)frame_height / (double)2 / tan26_degrees) * (double)90 / -M_PI_2);
 
     ESP_LOGI(TAG, "angles_diff x: %d° y: %df°", angles_diff->pan, angles_diff->tilt);
 
