@@ -23,7 +23,7 @@
 #define MODE_FIND_SUN   0
 #define MODE_FAST9      1
 
-#define ANALISIS_MODE MODE_FIND_SUN
+#define ANALISIS_MODE MODE_FAST9
 
 #define MEMORY_LOG_PROBABILITY_DIVIDER 7
 
@@ -54,7 +54,7 @@ typedef struct {
 
 /**
  * @brief logs heap memory info
- * 
+ * use xPortGetCoreID() as param;
  * @param core_id
  */
 void log_memory(BaseType_t core_id);

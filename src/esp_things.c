@@ -49,10 +49,10 @@ esp_err_t init_esp_things(void)
     }
     ESP_ERROR_CHECK(nvs_flash_err);
 
-    esp_err_t servos_err = init_my_servos();
-    ESP_ERROR_CHECK(servos_err);
+    // esp_err_t servos_err = init_my_servos();
+    // ESP_ERROR_CHECK(servos_err);
 
-    esp_err_t err = gpio_err & nvs_flash_err & servos_err;
+    esp_err_t err = gpio_err & nvs_flash_err; // & servos_err;
 
     return err;
 }
@@ -60,7 +60,7 @@ esp_err_t init_esp_things(void)
 
 void led_blink(float periods, uint8_t count)
 {
-    for (uint8_t def_i = 0; def_i < count; ++def_i) {
+    for (uint8_t def_i = 0; def_i < count; def_i++) {
         LED_ON();
         vTaskDelay(BLINK_PERIOD * periods);
         LED_OFF();
@@ -69,56 +69,45 @@ void led_blink(float periods, uint8_t count)
 }
 
 
-// void log_memory(BaseType_t core_id)
-// {
-    // size_t free_size = heap_caps_get_free_size(MALLOC_CAP_DEFAULT);
-//     size_t total_size = heap_caps_get_total_size(MALLOC_CAP_DEFAULT);
-//     size_t used_size = total_size - free_size;
-//     ESP_LOGI(TAG, "  --  memory used %d / %d (%.2f %%) core %d ", used_size, total_size,
-//         (float)used_size * 100 / (float)total_size, core_id);
-// }
-
-
 void log_memory(
     BaseType_t core_id
 ) {
     // Масив з усіма типами пам'яті, які потрібно перевірити
     const uint32_t caps[] = {
-        MALLOC_CAP_EXEC,        // Виконуваний код
-        MALLOC_CAP_32BIT,       // 32-бітна пам'ять
-        MALLOC_CAP_8BIT,        // 8-бітна пам'ять
-        MALLOC_CAP_DMA,         // Пам'ять, придатна для DMA
-        MALLOC_CAP_PID2,        // Пам'ять для PID2 (якщо використовується)
-        MALLOC_CAP_PID3,        // Пам'ять для PID3
-        MALLOC_CAP_PID4,        // Пам'ять для PID4
-        MALLOC_CAP_PID5,        // Пам'ять для PID5
-        MALLOC_CAP_PID6,        // Пам'ять для PID6
-        MALLOC_CAP_PID7,        // Пам'ять для PID7
-        MALLOC_CAP_SPIRAM,      // Зовнішня SPIRAM (якщо підтримується)
-        MALLOC_CAP_INTERNAL,    // Внутрішня пам'ять
-        MALLOC_CAP_DEFAULT,     // Тип за замовчуванням
-        0                       // Завершення масиву (нульовий термінатор)
+        MALLOC_CAP_EXEC,
+        MALLOC_CAP_32BIT,
+        MALLOC_CAP_8BIT,
+        MALLOC_CAP_DMA,
+        MALLOC_CAP_PID2,        // no use ever detected
+        MALLOC_CAP_PID3,        // no use ever detected
+        MALLOC_CAP_PID4,        // no use ever detected
+        MALLOC_CAP_PID5,        // no use ever detected
+        MALLOC_CAP_PID6,        // no use ever detected
+        MALLOC_CAP_PID7,        // no use ever detected
+        MALLOC_CAP_SPIRAM,
+        MALLOC_CAP_INTERNAL,
+        MALLOC_CAP_DEFAULT,
+        0
     };
 
-    // Назви типів пам'яті для зрозумілого виведення
     const char *cap_names[] = {
         "EXEC",
         "32BIT",
         "8BIT",
         "DMA",
-        "PID2",
-        "PID3",
-        "PID4",
-        "PID5",
-        "PID6",
-        "PID7",
+        "PID2",     // no use
+        "PID3",     // no use
+        "PID4",     // no use
+        "PID5",     // no use
+        "PID6",     // no use
+        "PID7",     // no use
         "SPIRAM",
         "INTERNAL",
         "DEFAULT",
         NULL
     };
 
-    ESP_LOGI(TAG, "Memory usage for core %d:", core_id);
+    ESP_LOGI(TAG, "Memory usage for core %d %s:", core_id, core_id ? "webserver" : "photographer");     // core 0 pinned to photographer, core 1 pinned to webserver
     for (int i = 0; caps[i] != 0; i++) {
         size_t free_size = heap_caps_get_free_size(caps[i]);
         size_t total_size = heap_caps_get_total_size(caps[i]);
@@ -127,7 +116,7 @@ void log_memory(
         // Виводимо тільки ті типи пам'яті, які мають ненульовий розмір
         if (total_size > 0) {
             float used_percent = (float)used_size * 100 / (float)total_size;
-            ESP_LOGI(TAG, "  %s: used %d / %d (%.2f%%)", cap_names[i], used_size, total_size, used_percent);
+            ESP_LOGI(TAG, "\t\t%s: used %d / %d (%.2f%%)", cap_names[i], used_size, total_size, used_percent);
         }
     }
 }

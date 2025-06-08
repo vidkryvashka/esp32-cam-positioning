@@ -15,20 +15,22 @@
 #define SERVO_TILT_ANGLE_BOTTOM     0
 #define SERVO_TILT_ANGLE_TOP        180
 
+extern bool are_servos_inited;
 
 #define SERVO_QUEUE_LEN     5
 extern QueueHandle_t servo_queue;
 
 
+/**
+ * @brief   Seervos managing implemented via queue only with servo task
+ * 
+ * 
+ */
+
 esp_err_t init_my_servos();
 esp_err_t deinit_my_servos();
 
 esp_err_t run_servo_manager();
-
-
-uint8_t my_servo_get_angle(uint8_t servo_chan);
-
-// esp_err_t my_servo_set_angle(uint8_t servo_chan, uint8_t angle);
 
 
 #endif

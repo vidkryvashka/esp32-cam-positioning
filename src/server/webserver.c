@@ -30,7 +30,6 @@
 
 static uint16_t sending_period = PHOTOGRAPHER_DELAY_MS; // 1000;  // ms
 static httpd_handle_t server = NULL;
-// static volatile int ws_sockfd = -1;
 #define MAX_WS_CLIENTS 3
 static int ws_clients[MAX_WS_CLIENTS] = {-1, -1, -1};
 
@@ -42,33 +41,23 @@ static keypoints_shell_t *keypoints_shell_local_ref;
 static esp_err_t form_metadata_json(
     char *dest_json,
     const uint16_t metadata_size,
-    const camera_fb_t *frame
+    const uint16_t frame_width,
+    const uint16_t frame_height
 ) {
     esp_err_t err = ESP_OK;
     char format[] = "{\"type\":\"metadata\",\"img-size\":{\"width\":%d,\"height\":%d},\"center\":{\"x\":%d,\"y\":%d},\"count\":%zu,\"coords\":[";
-// #if DEFS_MARK_SUN == 1
-#if ANALISIS_MODE == MODE_FIND_SUN
-    max_brightness_pixels_t *mbp = &keypoints_shell_local_ref->mbp;
-    const vector_t *coords = mbp->coords;
+    pixels_cloud_t *pixels_cloud = &keypoints_shell_local_ref->pixels_cloud;
+    vector_t *coords = pixels_cloud->coords;
     snprintf(dest_json, metadata_size,
             format,
-            frame->width, frame->height,
-            mbp->center_coord.x,
-            mbp->center_coord.y,
-            coords->size
-    );
-#elif ANALISIS_MODE == MODE_FAST9
-    const vector_t *coords = keypoints_shell_local_ref->keypoints;
-    snprintf(dest_json, metadata_size,
-            format,
-            frame->width, frame->height,
-            -1, -1,
+            frame_width, frame_height,
+            pixels_cloud->center_coord.x,
+            pixels_cloud->center_coord.y,
             coords != NULL ? coords->size : 0
     );
-#endif
     if (coords) {
         char coords_buf[metadata_size - strlen(format)];
-        for (size_t i = 0; i < coords->size; ++i) {
+        for (size_t i = 0; i < coords->size; i++) {
             pixel_coord_t *coord = vector_get(coords, i);
             snprintf(coords_buf, sizeof(coords_buf), 
                     "{\"x\":%zu,\"y\":%zu}%s",
@@ -91,7 +80,7 @@ static uint8_t ws_send(
     httpd_ws_frame_t *ws_pkt
 ) {
     uint8_t num_sent = 0;
-    for (int i = 0; i < MAX_WS_CLIENTS; ++i, ++num_sent) {
+    for (int i = 0; i < MAX_WS_CLIENTS; i++, num_sent++) {
         if (ws_clients[i] != -1) {
             esp_err_t ret = httpd_ws_send_frame_async(server, ws_clients[i], ws_pkt);
             if (ret != ESP_OK) {
@@ -104,19 +93,19 @@ static uint8_t ws_send(
 }
 
 
-static void send_image_task(
+static void send_frames_task(
     void *pvParameters
 ) {
     while (true) {
 
-        if ((ws_clients[0] & ws_clients[0] & ws_clients[0]) == -1) {
+        if (ws_clients[0] == -1 && ws_clients[1] == -1 && ws_clients[2] == -1) {
             vTaskDelay(pdMS_TO_TICKS(1000));
             continue;
         }
 
-        if (xSemaphoreTake(frame_mutex, pdMS_TO_TICKS(5000)) != pdTRUE) {
-            ESP_LOGE(TAG, "send_image_task failed to take frame_mutex");
-            vTaskDelay(pdMS_TO_TICKS(1000));
+        if (xSemaphoreTake(frame_mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
+            ESP_LOGE(TAG, "send_frames_task failed to take frame_mutex");
+            vTaskDelay(pdMS_TO_TICKS(100));
             continue;
         }
 
@@ -129,10 +118,14 @@ static void send_image_task(
 
         uint8_t *jpg_buf = NULL;
         size_t jpg_buf_len = 0;
-        if (frame2jpg(frame2send, 80, &jpg_buf, &jpg_buf_len)) {
-            const uint16_t metadata_size = 2 << 9;
+        bool frame_mutex_given = 0;
+         if (frame2send && frame2jpg(frame2send, 80, &jpg_buf, &jpg_buf_len)) {
+            uint16_t frame_width = frame2send->width, frame_height = frame2send->height; 
+            xSemaphoreGive(frame_mutex);
+            frame_mutex_given = 1;
+            const uint16_t metadata_size = 1 << 10;
             char metadata_json[metadata_size];
-            form_metadata_json(metadata_json, metadata_size, frame2send);
+            form_metadata_json(metadata_json, metadata_size, frame_width, frame_height);
             httpd_ws_frame_t ws_metadata_pkt = {
                 .final = true,
                 .fragmented = false,
@@ -140,9 +133,9 @@ static void send_image_task(
                 .payload = (uint8_t *)metadata_json,
                 .len = strlen(metadata_json)
             };
-            // ESP_LOGI(TAG, "send_image_task sent metadata ");
             uint8_t num_meta_sent = ws_send(&ws_metadata_pkt);
-
+            ESP_LOGI(TAG, "jpg_buf_len = %d ", jpg_buf_len);
+ 
             httpd_ws_frame_t ws_img_pkt = {
                 .final = true,
                 .fragmented = false,
@@ -151,17 +144,28 @@ static void send_image_task(
                 .len = jpg_buf_len
             };
             uint8_t num_frame_sent = ws_send(&ws_img_pkt);
+            
+            // ESP_LOGI(TAG, "free jpeg_buff ");
+            if (jpg_buf_len < 128*1024) {       // firstly 128*1024 given and shrinked in frame2jpg
+                free(jpg_buf);                 // sometimes frame2jpg determines jpg_buf_len fucking huge and writes jpg_buf idk where.
+            } else {
+                ESP_LOGE(TAG, "Invalid jpg_buf_len = %d, skipping free! ", jpg_buf_len);
+                log_memory(xPortGetCoreID());
+            }
+        
             if (num_meta_sent != num_frame_sent)
-                ESP_LOGW(TAG, "send_image_task num_meta_sent != num_frame_sent : %d %d ", num_meta_sent, num_frame_sent);
+                ESP_LOGW(TAG, "send_frames_task num_meta_sent != num_frame_sent : %d %d ", num_meta_sent, num_frame_sent);
             if (num_frame_sent == 0)
-                ESP_LOGI(TAG, "send_image_task no clients ");
-            free(jpg_buf);
+                ESP_LOGI(TAG, "send_frames_task no clients ");
         } else {
-            ESP_LOGE(TAG, "send_image_task JPEG conversion failed");
+            ESP_LOGE(TAG, "send_frames_task JPEG conversion failed");
         }
-        xSemaphoreGive(frame_mutex);
-        frame2send = current_frame;
+        if (!frame_mutex_given) {
+            xSemaphoreGive(frame_mutex);
+            frame_mutex_given = 1;
+        }
         vTaskDelay(pdMS_TO_TICKS(sending_period));
+        frame2send = current_frame;
 
         while (pause_photographer)
             vTaskDelay(pdMS_TO_TICKS(500));
@@ -175,7 +179,7 @@ static esp_err_t ws_handler(httpd_req_t *req)
 {
     if (req->method == HTTP_GET) {
         int sockfd = httpd_req_to_sockfd(req);
-        for (int i = 0; i < MAX_WS_CLIENTS; ++i) {
+        for (int i = 0; i < MAX_WS_CLIENTS; i++) {
             if (ws_clients[i] == -1) {
                 ws_clients[i] = sockfd;
                 ESP_LOGI(TAG, "New WS client №%d: %d", i, sockfd);
@@ -298,7 +302,7 @@ static esp_err_t setup_server(void) {
     httpd_register_uri_handler(server, &uri_ws);
     httpd_register_uri_handler(server, &uri_pause);
     httpd_register_uri_handler(server, &uri_set_rect);
-    xTaskCreatePinnedToCore(send_image_task, "send_image_task", 4096, NULL, 5, NULL, 1);
+    xTaskCreatePinnedToCore(send_frames_task, "send_frames_task", 4096, NULL, 5, NULL, 1);
 
     return server_err;
 }

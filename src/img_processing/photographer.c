@@ -6,8 +6,8 @@
 #include "img_processing/photographer.h"
 #if ANALISIS_MODE == MODE_FIND_SUN
     #include "img_processing/find_sun.h"
-#elif ANALISIS_MODE == MODE_FIND_SUN
-    #include "img_processing/ORB_defs.h"
+#elif ANALISIS_MODE == MODE_FAST9
+    #include "img_processing/vision_defs.h"
 #endif
 #include "my_servos.h"
 
@@ -18,17 +18,17 @@
 volatile bool pause_photographer = 0;   // extern declared in img_processing/photographer.h, used in webserver.c
 volatile SemaphoreHandle_t frame_mutex;
 camera_fb_t *current_frame = NULL;      // extern declared in camera.h
+static camera_fb_t *fragment = NULL;
 QueueHandle_t servo_queue;
-
-
 static keypoints_shell_t keypoints_shell;
+
+
 
 keypoints_shell_t* get_keypoints_shell_reference()
 {
     return &keypoints_shell;
 }
 
-static camera_fb_t *fragment = NULL;
 
 camera_fb_t* operate_fragment(
     const rectangle_coords_t *rect
@@ -36,8 +36,10 @@ camera_fb_t* operate_fragment(
     ESP_LOGI(TAG, "Rectangle coordinates: Top left: (%d, %d), width: %d, height: %d)", 
             rect->top_left.x, rect->top_left.y, rect->width, rect->height);
     
-    if (fragment != NULL)
+    if (fragment != NULL) {
+        ESP_LOGI(TAG, "free fragment on replace ");
         camera_fb_free(fragment);
+    }
     
     fragment = camera_fb_crop(current_frame, rect);
 
@@ -48,12 +50,11 @@ camera_fb_t* operate_fragment(
 }
 
 
-// QueueHandle_t servo_queue;  // declared in my_servos.h, inited in servos.c
-
 static esp_err_t take_analize_photo()
 {
     if (xSemaphoreTake(frame_mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
         ESP_LOGE(TAG, "take_photo() failed to take frame_mutex ");
+        // log_memory(1);  // another (webserver) core
         return ESP_FAIL;
     }
 
@@ -67,12 +68,12 @@ static esp_err_t take_analize_photo()
 #if ANALISIS_MODE == MODE_FIND_SUN
     mark_sun(&keypoints_shell.mbp, current_frame, &angles_diff);
 #elif ANALISIS_MODE == MODE_FAST9
-    find_fragment(current_frame, fragment, NULL, keypoints_shell.keypoints);
+    find_drone(current_frame, fragment, &keypoints_shell.pixels_cloud);
 #endif
 
     xSemaphoreGive(frame_mutex);
 
-    if (abs(angles_diff.pan) > ANGLE_THRESHOLD || abs(angles_diff.tilt) > ANGLE_THRESHOLD)
+    if (are_servos_inited && (abs(angles_diff.pan) > ANGLE_THRESHOLD || abs(angles_diff.tilt) > ANGLE_THRESHOLD))
         if (xQueueSend(servo_queue, (void *)&angles_diff, 10) != pdTRUE) {
             ESP_LOGE(TAG, "\t\t--- servo_actions couldn't xQueueSend, queue fill ");
         }
@@ -113,15 +114,11 @@ esp_err_t run_photographer()
     frame_mutex = xSemaphoreCreateMutex();
     current_frame = esp_camera_fb_get();
     keypoints_shell = (keypoints_shell_t){
-#if ANALISIS_MODE == MODE_FIND_SUN
-        .mbp = {
+        .pixels_cloud = {
             .coords = vector_create(sizeof(pixel_coord_t)),
             .center_coord = (pixel_coord_t){0, 0}
+            // .need2ORB = 0
         },
-#else
-        .keypoints = vector_create(sizeof(pixel_coord_t)),
-#endif
-        .need2ORB = 0
     };
     if (xTaskCreatePinnedToCore(
                     &photographer_task,

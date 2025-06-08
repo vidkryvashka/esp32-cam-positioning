@@ -13,7 +13,7 @@
 
 #define ANGLE_DIVIDER   1.5
 
-static bool is_initialized = false;
+bool are_servos_inited = false;
 
 static uint8_t curr_pan_angle = 90;
 static uint8_t curr_tilt_angle = 90;
@@ -60,7 +60,7 @@ esp_err_t init_my_servos()
 
     servo_queue = xQueueCreate(SERVO_QUEUE_LEN, sizeof(angles_diff_t));
 
-    if (is_initialized) {
+    if (are_servos_inited) {
         ESP_LOGW(TAG, "Servos already initialized ");
         return ESP_OK;
     }
@@ -110,7 +110,7 @@ esp_err_t init_my_servos()
     }
     ledc_fade_func_install(0);
 
-    is_initialized = true;
+    are_servos_inited = 1;
     ESP_LOGI(TAG, "Servos initialized successfully ");
     return ESP_OK;
 }
@@ -118,7 +118,7 @@ esp_err_t init_my_servos()
 
 esp_err_t deinit_my_servos()
 {
-    if (!is_initialized) {
+    if (!are_servos_inited) {
         ESP_LOGW(TAG, "Servos not initialized ");
         return ESP_OK;
     }
@@ -138,7 +138,7 @@ esp_err_t deinit_my_servos()
         return ret;
     }
 
-    is_initialized = false;
+    are_servos_inited = 0;
     ESP_LOGI(TAG, "Servos deinitialized successfully ");
     return ESP_OK;
 }
@@ -158,7 +158,7 @@ extern esp_err_t rand_angles_send() {
 static esp_err_t my_servos_change_angles(
     const angles_diff_t *angles_diff
 ) {
-    if (!is_initialized) {
+    if (!are_servos_inited) {
         ESP_LOGE(TAG, "Servos not initialized ");
         return ESP_ERR_INVALID_STATE;
     }
@@ -211,10 +211,6 @@ static void servo_manager_task(
         if (xQueueReceive(servo_queue, (void *)&angles_diff, 0) == pdTRUE) {
             ESP_LOGI(TAG, "\t\t--- got angles_diff %d° %d° ", angles_diff.pan, angles_diff.tilt);
             my_servos_change_angles(&angles_diff);
-        ;
-            // uint8_t pan_angle = my_servo_get_angle(SERVO_PAN_CH);
-            // uint8_t tilt_angle = my_servo_get_angle(SERVO_TILT_CH);
-            // ESP_LOGI(TAG, "\t\t-- servos angles pan: %d° tilt: %d° ", pan_angle, tilt_angle);
         }
         
         vTaskDelay(pdMS_TO_TICKS(10));
@@ -224,6 +220,9 @@ static void servo_manager_task(
 
 esp_err_t run_servo_manager()
 {
+    esp_err_t servos_err = init_my_servos();
+    ESP_ERROR_CHECK(servos_err);
+
     esp_err_t task_created = xTaskCreatePinnedToCore(
                     &servo_manager_task,
                     "servo_manager_task",

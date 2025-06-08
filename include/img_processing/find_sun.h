@@ -5,27 +5,26 @@
 #include "img_processing/camera.h"
 
 
-/**
- * @brief pixel cloud with center
- */
-typedef struct {
-    vector_t *coords;
-    pixel_coord_t center_coord;
-} max_brightness_pixels_t;
+// /**
+//  * @brief pixel cloud with center
+//  */
+// typedef struct {
+//     vector_t *coords;
+//     pixel_coord_t center_coord;
+// } pixels_cloud_t;
 
 
 /**
  * @brief makes as called
  * 
- * @param *mbp max_brightness_pixels_t destination to write
+ * @param *mbp pixels_cloud_t destination to write
  * @param frame camera_fb_t*
- * @return max_brightness_pixels_t* which then needs to be freed
+ * @return pixels_cloud_t* which then needs to be freed
  */
 esp_err_t mark_sun(
-    max_brightness_pixels_t *mbp,
+    pixels_cloud_t *pixels_cloud,
     const camera_fb_t *frame,
     angles_diff_t *angles_diff
-    // float angles[2]
 );
 
 

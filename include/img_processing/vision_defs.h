@@ -6,29 +6,9 @@
 #include "img_processing/camera.h"
 
 #define START_THRESHOLD 70
-#define MIN_THRESHOLD 20
+#define MIN_THRESHOLD 50
 #define KEYPOINTS_MAX_COUNT 64
-#define BRIEF_SIZE 256
-#define PATCH_SIZE 31
-#define SIGMA 5
-#define MAX_KEYPOINTS 10000
-#define SCALE_FACTOR 1.41421356237 // sqrt(2)
-#define NLEVELS 8
-#define EDGE_THRESHOLD 31
 #define SAVIMG_IMAGE_DIM_COEF 0.4
-
-
-typedef struct {
-    uint8_t data[BRIEF_SIZE / NLEVELS]; // 256 bit = 32 byte
-} brief_descriptor_t;
-
-
-typedef struct {
-    pixel_coord_t pixel_coord;
-    float angle;
-    uint8_t level;
-    brief_descriptor_t descriptor;
-} keypoint_t;
 
 
 
@@ -51,15 +31,15 @@ esp_err_t fast9(
  * 
  * @param frame     big one
  * @param fragment  consider smaller image
- * @param top_left  forgot why
- * @param keypoints global messy variable to send it to web page
+//  * @param top_left  forgot why
+ * @param pixels_cloud global messy variable to send it to web page
  * @return          similarity: [0, 100] % posibility measurement fragment is in frame, < 0 if some errors, not implemented
  */
-int8_t find_fragment(
+int8_t find_drone(
     camera_fb_t *frame,
     camera_fb_t *fragment,
-    rectangle_coords_t *rect,
-    vector_t *keypoints
+    // rectangle_coords_t *rect,
+    pixels_cloud_t *pixels_cloud
 );
 
 #endif

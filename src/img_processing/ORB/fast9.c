@@ -4,7 +4,7 @@
 
 #define TAG "ORB_FAST"
  
-#include "img_processing/ORB_defs.h"
+#include "img_processing/vision_defs.h"
 
 
 static void makeOffsets(
@@ -2822,7 +2822,7 @@ static void fast9ComputeScores(
     if (scores->capacity < num_corners)
         vector_reserve(scores, num_corners);
 
-    for (i = 0; i < num_corners; ++i)
+    for (i = 0; i < num_corners; i++)
     {
         pixel_coord_t *p = vector_get(c, i);
         uint8_t score = fast9CornerScore(fb1->buf + w * p->y + p->x, pixel, bstart);
@@ -2844,8 +2844,8 @@ static void fast9Detect(
     makeOffsets(pixel, w);
     vector_reserve(c, 512);
 
-    for (uint16_t y = margin; y < h - margin; ++y)
-        for (uint16_t x = margin; x < w - margin; ++x)
+    for (uint16_t y = margin; y < h - margin; y++)
+        for (uint16_t x = margin; x < w - margin; x++)
         {
             const uint8_t *p = fb1->buf + y * w + x;
 
@@ -5830,7 +5830,7 @@ static void fastNonmaxSuppression(
     vector_t *row_start = vector_create(sizeof(int));
     vector_reserve(row_start, last_row+1);
 
-    for (i = 0; i < last_row + 1; ++i) {
+    for (i = 0; i < last_row + 1; i++) {
         int _val = -1;
         vector_set(row_start, i, &_val);
     }
@@ -5845,7 +5845,7 @@ static void fastNonmaxSuppression(
 
     vector_reserve(res, num_corners);
     
-    for (i = 0; i < num_corners; ++i)
+    for (i = 0; i < num_corners; i++)
     {
         uint8_t score = *(uint8_t *)vector_get(scores, i);
         uint16_t xx = ((pixel_coord_t *)vector_get(c, i))->x;
@@ -5917,7 +5917,7 @@ static void fastNonmaxSuppression(
                 point_below < num_corners   &&
                 ((pixel_coord_t *)vector_get(c, point_below))->y == yy+1   &&
                 ((pixel_coord_t *)vector_get(c, point_below))->x < xx-1;
-                ++ point_below
+                point_below ++
             )
                 ;
 
@@ -5926,7 +5926,7 @@ static void fastNonmaxSuppression(
                 j < num_corners &&
                 ((pixel_coord_t *)vector_get(c, point_below))->y == yy+1   &&
                 ((pixel_coord_t *)vector_get(c, point_below))->x <= xx+1;
-                ++j
+                j++
             ) {
                 int x = ((pixel_coord_t *)vector_get(c, point_below))->x;
                 if (
