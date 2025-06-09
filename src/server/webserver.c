@@ -56,40 +56,85 @@ static esp_err_t form_metadata_json(
             coords != NULL ? coords->size : 0
     );
     if (coords) {
-        char coords_buf[metadata_size - strlen(format)];
+        const uint8_t coords_buf_size = 24;
+        char coords_buf[coords_buf_size];
         for (size_t i = 0; i < coords->size; i++) {
             pixel_coord_t *coord = vector_get(coords, i);
-            snprintf(coords_buf, sizeof(coords_buf), 
+            snprintf(coords_buf, coords_buf_size, 
                     "{\"x\":%zu,\"y\":%zu}%s",
                     coord->x,
                     coord->y,
                     i < coords->size - 1 ? "," : "");
-            strcat(dest_json, coords_buf);
+            strncat(dest_json, coords_buf, coords_buf_size);
+            bzero(coords_buf, coords_buf_size);
         }
     } else {
         ESP_LOGE(TAG, "form_metadata_json no coords ");
         err = ESP_FAIL;
     }
-    strcat(dest_json, "]}");
+    strcat(dest_json, "]}\0");
 
     return err;
 }
 
 
-static uint8_t ws_send(
+static uint8_t ws_send_pkt(
     httpd_ws_frame_t *ws_pkt
 ) {
     uint8_t num_sent = 0;
-    for (int i = 0; i < MAX_WS_CLIENTS; i++, num_sent++) {
+    for (int i = 0; i < MAX_WS_CLIENTS; i++) {
         if (ws_clients[i] != -1) {
             esp_err_t ret = httpd_ws_send_frame_async(server, ws_clients[i], ws_pkt);
             if (ret != ESP_OK) {
                 ESP_LOGW(TAG, "Client №%d %d disconnected", i, ws_clients[i]);
                 ws_clients[i] = -1;
-            }
+            } else
+                num_sent ++;
         }
     }
     return num_sent;
+}
+
+
+static int8_t send_meta(
+    void
+) {
+    if (!frame2send)
+        return 0;
+
+    uint16_t frame_width = frame2send->width, frame_height = frame2send->height;
+    const uint16_t metadata_size = /*strlen(json_begin_format)*/102 + 29 * sizeof(char) * keypoints_shell_local_ref->pixels_cloud.coords->size + 16;
+    ESP_LOGI(TAG, "metadata size %d ", metadata_size);
+    char metadata_json[metadata_size];
+    form_metadata_json(metadata_json, metadata_size, frame_width, frame_height);
+    httpd_ws_frame_t ws_metadata_pkt = {
+        .final = true,
+        .fragmented = false,
+        .type = HTTPD_WS_TYPE_TEXT,
+        .payload = (uint8_t *)metadata_json,
+        .len = strlen(metadata_json)
+    };
+    ESP_LOGI(TAG, "sending metadata ");
+
+    return ws_send_pkt(&ws_metadata_pkt);
+}
+
+
+static int8_t send_img(
+    uint8_t *jpg_buf,   // discards const
+    const size_t jpg_buf_len
+) {
+    ESP_LOGI(TAG, "jpg_buf_len = %d ", jpg_buf_len);
+        
+    httpd_ws_frame_t ws_img_pkt = {
+        .final = true,
+        .fragmented = false,
+        .type = HTTPD_WS_TYPE_BINARY,
+        .payload = jpg_buf,
+        .len = jpg_buf_len
+    };
+
+    return ws_send_pkt(&ws_img_pkt);
 }
 
 
@@ -119,31 +164,14 @@ static void send_frames_task(
         uint8_t *jpg_buf = NULL;
         size_t jpg_buf_len = 0;
         bool frame_mutex_given = 0;
-         if (frame2send && frame2jpg(frame2send, 80, &jpg_buf, &jpg_buf_len)) {
-            uint16_t frame_width = frame2send->width, frame_height = frame2send->height; 
+        
+        int8_t num_meta_sent = send_meta();
+
+        if (frame2send && frame2jpg(frame2send, 12, &jpg_buf, &jpg_buf_len)) {
+            int8_t num_img_sent = send_img(jpg_buf, jpg_buf_len);
+
             xSemaphoreGive(frame_mutex);
             frame_mutex_given = 1;
-            const uint16_t metadata_size = 1 << 10;
-            char metadata_json[metadata_size];
-            form_metadata_json(metadata_json, metadata_size, frame_width, frame_height);
-            httpd_ws_frame_t ws_metadata_pkt = {
-                .final = true,
-                .fragmented = false,
-                .type = HTTPD_WS_TYPE_TEXT,
-                .payload = (uint8_t *)metadata_json,
-                .len = strlen(metadata_json)
-            };
-            uint8_t num_meta_sent = ws_send(&ws_metadata_pkt);
-            ESP_LOGI(TAG, "jpg_buf_len = %d ", jpg_buf_len);
- 
-            httpd_ws_frame_t ws_img_pkt = {
-                .final = true,
-                .fragmented = false,
-                .type = HTTPD_WS_TYPE_BINARY,
-                .payload = jpg_buf,
-                .len = jpg_buf_len
-            };
-            uint8_t num_frame_sent = ws_send(&ws_img_pkt);
             
             // ESP_LOGI(TAG, "free jpeg_buff ");
             if (jpg_buf_len < 128*1024) {       // firstly 128*1024 given and shrinked in frame2jpg
@@ -152,11 +180,7 @@ static void send_frames_task(
                 ESP_LOGE(TAG, "Invalid jpg_buf_len = %d, skipping free! ", jpg_buf_len);
                 log_memory(xPortGetCoreID());
             }
-        
-            if (num_meta_sent != num_frame_sent)
-                ESP_LOGW(TAG, "send_frames_task num_meta_sent != num_frame_sent : %d %d ", num_meta_sent, num_frame_sent);
-            if (num_frame_sent == 0)
-                ESP_LOGI(TAG, "send_frames_task no clients ");
+            ESP_LOGI(TAG, "ws sent jsons %d\timgs %d ", num_meta_sent, num_img_sent);
         } else {
             ESP_LOGE(TAG, "send_frames_task JPEG conversion failed");
         }
@@ -168,9 +192,7 @@ static void send_frames_task(
         frame2send = current_frame;
 
         while (pause_photographer)
-            vTaskDelay(pdMS_TO_TICKS(500));
-        
-        vTaskDelay(pdMS_TO_TICKS(10));
+            vTaskDelay(pdMS_TO_TICKS(200));
     }
 }
 

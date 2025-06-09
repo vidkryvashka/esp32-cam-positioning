@@ -5951,13 +5951,13 @@ esp_err_t fast9(
     vector_t *keypoints,
     uint8_t threshold
 ) {
+    vector_clear(keypoints);
     vector_t *ct = vector_create(sizeof(pixel_coord_t));
     fast9Detect(fb1, ct, threshold);
     
     vector_t *scores = vector_create(sizeof(uint8_t));
     fast9ComputeScores(fb1, ct, scores, threshold);
 
-    vector_clear(keypoints);
     fastNonmaxSuppression(ct, scores, keypoints);
 
     vector_destroy(ct);

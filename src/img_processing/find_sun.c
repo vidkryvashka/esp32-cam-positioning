@@ -110,7 +110,6 @@ esp_err_t mark_sun(
     pixels_cloud_t *pixels_cloud,
     const camera_fb_t *frame,
     angles_diff_t *angles_diff
-    // float angles[2]
 ) {
     esp_err_t err = find_max_brightness_pixels(pixels_cloud, frame);
     if (err) {
@@ -119,10 +118,13 @@ esp_err_t mark_sun(
     }
 
     if (angles_diff) {
-        // float angles[2] = {0, 0};
-        calculate_angles_diff(&pixels_cloud->center_coord, angles_diff);
+        if (calculate_angles_diff(&pixels_cloud->center_coord, angles_diff) != ESP_OK) {
+            ESP_LOGE(TAG, "mark sun calculate_angles_diff returned err ");
+            return ESP_FAIL;
+        }
     } else {
         ESP_LOGE(TAG, "mark_sun no angles_diff ");
+        return ESP_FAIL;
     }
     
     return ESP_OK;

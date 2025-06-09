@@ -5,9 +5,7 @@
 #include "my_vector.h"
 #include "img_processing/camera.h"
 
-#define START_THRESHOLD 70
-#define MIN_THRESHOLD 50
-#define KEYPOINTS_MAX_COUNT 64
+
 #define SAVIMG_IMAGE_DIM_COEF 0.4
 
 
@@ -35,10 +33,9 @@ esp_err_t fast9(
  * @param pixels_cloud global messy variable to send it to web page
  * @return          similarity: [0, 100] % posibility measurement fragment is in frame, < 0 if some errors, not implemented
  */
-int8_t find_drone(
+esp_err_t find_drone(
     camera_fb_t *frame,
     camera_fb_t *fragment,
-    // rectangle_coords_t *rect,
     pixels_cloud_t *pixels_cloud
 );
 

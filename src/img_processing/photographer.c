@@ -60,16 +60,21 @@ static esp_err_t take_analize_photo()
 
     if (current_frame != NULL)
         esp_camera_fb_return(current_frame);
+    
+    ESP_LOGI(TAG, "returned frame ");
 
     current_frame = esp_camera_fb_get();
+    ESP_LOGI(TAG, "took frame ");
+
     angles_diff_t angles_diff = {0,0};
-    // float angles[2] = {0,0};
 
 #if ANALISIS_MODE == MODE_FIND_SUN
-    mark_sun(&keypoints_shell.mbp, current_frame, &angles_diff);
+    mark_sun(&keypoints_shell.pixels_cloud, current_frame, &angles_diff);
 #elif ANALISIS_MODE == MODE_FAST9
     find_drone(current_frame, fragment, &keypoints_shell.pixels_cloud);
 #endif
+
+    ESP_LOGI(TAG, "analized frame ");
 
     xSemaphoreGive(frame_mutex);
 
