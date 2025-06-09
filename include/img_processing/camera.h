@@ -54,6 +54,7 @@ typedef struct {
 typedef struct {
     vector_t *coords;
     pixel_coord_t center_coord;
+    vector_t *claster_centers_coords;
 } pixels_cloud_t;
 
 

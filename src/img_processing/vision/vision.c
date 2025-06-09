@@ -41,7 +41,6 @@ static esp_err_t balance_fast9(
 esp_err_t find_drone(
     camera_fb_t *frame,
     camera_fb_t *fragment,
-    // rectangle_coords_t *rect,
     pixels_cloud_t *pixels_cloud
 ) {
 
@@ -50,52 +49,40 @@ esp_err_t find_drone(
     }
 
     balance_fast9(frame, pixels_cloud->coords);
-    // fast9(frame, pixels_cloud->coords, fast9_threshold);
-    ESP_LOGI(TAG, "image (%d x %d) corners: %d, threshold %d ", frame->width, frame->height, pixels_cloud->coords->size, fast9_threshold);
+    ESP_LOGI(TAG, "image (%d x %d) corners: %d, threshold %d ",
+            frame->width, frame->height, pixels_cloud->coords->size, fast9_threshold);
 
-    return 0;
-}
-
-
-
-
-static esp_err_t new_find_drone(
-    camera_fb_t *frame,
-    camera_fb_t *fragment,
-    pixels_cloud_t *pixels_cloud
-) {
-    if (frame->format != PIXFORMAT_GRAYSCALE) {
-        ESP_LOGE(TAG, "expected PIXFORMAT_GRAYSCALE");
-        return -1;
-    }
-
-    balance_fast9(frame, pixels_cloud->coords);
-    ESP_LOGI(TAG, "image (%d x %d) corners: %d, threshold %d ", 
-             frame->width, frame->height, pixels_cloud->coords->size, fast9_threshold);
 
     if (pixels_cloud->coords->size == 0) {
-        ESP_LOGW(TAG, "No keypoints found");
-        return -1;
+        ESP_LOGW(TAG, "find_drone \t no keypoints found ");
+        return ESP_OK;
     }
 
-    dbscan_result_t dbscan_result;
-    double epsilon = 10.0; // Налаштуйте за потреби
-    unsigned int min_points = 3; // Налаштуйте за потреби
 
-    if (dbscan_cluster(pixels_cloud, epsilon, min_points, &dbscan_result) != ESP_OK) {
+
+    double epsilon = 20.0;
+    unsigned int min_points = 3;
+
+
+    vector_t *cluster_centers = vector_create(sizeof(pixel_coord_t));
+    esp_err_t dbscan_err = dbscan_cluster(pixels_cloud, epsilon, min_points, cluster_centers);
+    if (dbscan_err != ESP_OK) {
         ESP_LOGE(TAG, "DBSCAN clustering failed");
-        return -1;
+        return ESP_FAIL;
     }
 
-    if (dbscan_select_random_center(&dbscan_result, &pixels_cloud->center_coord) != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to select random cluster center");
-        dbscan_result_destroy(&dbscan_result);
-        return -1;
-    }
+    ESP_LOGI(TAG, "dbscan clasters centers ");
+    vector_print(cluster_centers);
+
+
+    // if (dbscan_select_random_center(&dbscan_result, &pixels_cloud->center_coord) != ESP_OK) {
+    //     ESP_LOGE(TAG, "Failed to select random cluster center");
+    //     dbscan_result_destroy(&dbscan_result);
+    //     return ESP_FAIL;
+    // }
 
     ESP_LOGI(TAG, "Drone center: (%d, %d)", 
              pixels_cloud->center_coord.x, pixels_cloud->center_coord.y);
 
-    dbscan_result_destroy(&dbscan_result);
-    return 0;
+    return ESP_OK;
 }

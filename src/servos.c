@@ -16,7 +16,7 @@
 bool are_servos_inited = false;
 
 static uint8_t curr_pan_angle = 90;
-static uint8_t curr_tilt_angle = 60;
+static uint8_t curr_tilt_angle = 80;
 
 
 static uint32_t angle2duty(

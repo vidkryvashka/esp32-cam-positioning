@@ -19,7 +19,7 @@
  */
 esp_err_t fast9(
     const camera_fb_t *fb1, // gray single channel
-    vector_t *keypoints,
+    vector_t *keypoint_coords,
     uint8_t threshold
 );
 
@@ -31,7 +31,7 @@ esp_err_t fast9(
  * @param fragment  consider smaller image
 //  * @param top_left  forgot why
  * @param pixels_cloud global messy variable to send it to web page
- * @return          similarity: [0, 100] % posibility measurement fragment is in frame, < 0 if some errors, not implemented
+ * @return          err
  */
 esp_err_t find_drone(
     camera_fb_t *frame,

@@ -103,7 +103,10 @@ static int8_t send_meta(
         return 0;
 
     uint16_t frame_width = frame2send->width, frame_height = frame2send->height;
-    const uint16_t metadata_size = /*strlen(json_begin_format)*/102 + 29 * sizeof(char) * keypoints_shell_local_ref->pixels_cloud.coords->size + 16;
+    const uint16_t metadata_size =
+            /*strlen(json_begin_format)*/ (102) +
+            /*coords_arr*/ (29 * sizeof(char) * keypoints_shell_local_ref->pixels_cloud.coords->size) +
+            /*aware boundries*/ 16;
     ESP_LOGI(TAG, "metadata size %d ", metadata_size);
     char metadata_json[metadata_size];
     form_metadata_json(metadata_json, metadata_size, frame_width, frame_height);
@@ -228,24 +231,6 @@ static esp_err_t pause_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
-
-// esp_err_t rand_angles_send();
-// // to test servos from web page
-// void servo_actions()
-// {
-//     // uint8_t pan_angle = my_servo_get_angle(SERVO_PAN_CH);
-//     // uint8_t tilt_angle = my_servo_get_angle(SERVO_TILT_CH);
-//     // ESP_LOGI(TAG, "servos angles pan: %d tilt: %d ", pan_angle, tilt_angle);
-// 
-//     // angles_diff_t angles_diff = {-4, 5};
-//     // if (xQueueSend(servo_queue, (void *)&angles_diff, 10) != pdTRUE) {
-//     //     ESP_LOGE(TAG, "servo_actions couldn't xQueueSend, queue fill ");
-//     // }
-// 
-//     // rand_angles_send();
-// 
-//     ESP_LOGI(TAG, "servo_actions end ");
-// }
 
 static esp_err_t rect_handler(httpd_req_t *req)
 {

@@ -5948,17 +5948,17 @@ static void fastNonmaxSuppression(
 
 esp_err_t fast9(
     const camera_fb_t *fb1, // gray single channel
-    vector_t *keypoints,
+    vector_t *keypoint_coords,
     uint8_t threshold
 ) {
-    vector_clear(keypoints);
+    vector_clear(keypoint_coords);
     vector_t *ct = vector_create(sizeof(pixel_coord_t));
     fast9Detect(fb1, ct, threshold);
     
     vector_t *scores = vector_create(sizeof(uint8_t));
     fast9ComputeScores(fb1, ct, scores, threshold);
 
-    fastNonmaxSuppression(ct, scores, keypoints);
+    fastNonmaxSuppression(ct, scores, keypoint_coords);
 
     vector_destroy(ct);
     vector_destroy(scores);

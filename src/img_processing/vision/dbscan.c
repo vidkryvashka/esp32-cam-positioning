@@ -1,82 +1,87 @@
 #include <math.h>
 #include <stdlib.h>
 
+
+#define TAG     "my_dbscan"
+
+
+#define UNCLASSIFIED    -1
+#define NOISE           -2
+
 #include "img_processing/dbscan.h"
 
 
-static double euclidean_distance(pixel_coord_t *a, pixel_coord_t *b) {
-    return sqrt(pow(a->x - b->x, 2) + pow(a->y - b->y, 2));
-}
+static vector_t *local_coords_ref = NULL;
+static int *cluster_ids = NULL;
 
-esp_err_t dbscan_result_init(dbscan_result_t *result, size_t num_points) {
-    if (!result) return ESP_FAIL;
 
-    result->coords = vector_create(sizeof(pixel_coord_t));
-    result->cluster_centers = vector_create(sizeof(pixel_coord_t));
-    result->cluster_ids = (int *)heap_caps_malloc(num_points * sizeof(int), MALLOC_CAP_SPIRAM);
+static esp_err_t dbscan_reboot(
+    const pixels_cloud_t *pixels_cloud
+) {
+    if (!local_coords_ref)
+        local_coords_ref = pixels_cloud->coords;
 
-    if (!result->coords || !result->cluster_centers || !result->cluster_ids) {
-        ESP_LOGE(TAG_DBSCAN, "Failed to allocate memory for dbscan_result");
-        dbscan_result_destroy(result);
-        return ESP_FAIL;
-    }
+    if (!cluster_ids)
+        cluster_ids = (int *)heap_caps_malloc(local_coords_ref->size * sizeof(int), MALLOC_CAP_SPIRAM);
 
-    for (size_t i = 0; i < num_points; i++) {
-        result->cluster_ids[i] = UNCLASSIFIED;
+    for (size_t i = 0; i < local_coords_ref->size; i++) {
+        cluster_ids[i] = UNCLASSIFIED;
     }
 
     return ESP_OK;
 }
 
-void dbscan_result_destroy(dbscan_result_t *result) {
-    if (result) {
-        vector_destroy(result->coords);
-        vector_destroy(result->cluster_centers);
-        heap_caps_free(result->cluster_ids);
-        result->coords = NULL;
-        result->cluster_centers = NULL;
-        result->cluster_ids = NULL;
-    }
-}
 
-static esp_err_t get_neighbors(vector_t *coords, size_t index, double epsilon, vector_t *neighbors) {
-    pixel_coord_t *point = (pixel_coord_t *)vector_get(coords, index);
-    if (!point) return ESP_FAIL;
+static esp_err_t get_neighbors(
+    size_t index,
+    double epsilon,
+    vector_t *neighbors
+) {
+    pixel_coord_t *point = (pixel_coord_t *)vector_get(local_coords_ref, index);
+    if (!point)
+        return ESP_FAIL;
 
     vector_clear(neighbors);
 
-    for (size_t i = 0; i < coords->size; i++) {
-        if (i == index) continue;
-        pixel_coord_t *other = (pixel_coord_t *)vector_get(coords, i);
-        if (euclidean_distance(point, other) <= epsilon) {
+    for (size_t i = 0; i < local_coords_ref->size; i++) {
+        if (i == index)
+            continue;
+        pixel_coord_t *other = (pixel_coord_t *)vector_get(local_coords_ref, i);
+        if (sqrt(pow(point->x - other->x, 2) + pow(point->y - other->y, 2)) <= epsilon)
             if (vector_push_back(neighbors, &i) != ESP_OK) {
-                ESP_LOGE(TAG_DBSCAN, "Failed to add neighbor");
+                ESP_LOGE(TAG, "Failed to add neighbor ");
                 return ESP_FAIL;
             }
-        }
     }
     return ESP_OK;
 }
 
-static esp_err_t expand_cluster(dbscan_result_t *result, size_t index, int cluster_id, double epsilon, unsigned int min_points) {
-    vector_t *seeds = vector_create(sizeof(size_t));
-    if (!seeds) return ESP_FAIL;
 
-    if (get_neighbors(result->coords, index, epsilon, seeds) != ESP_OK) {
+static esp_err_t expand_cluster(
+    size_t index,
+    int cluster_id,
+    double epsilon,
+    uint min_points
+) {
+    vector_t *seeds = vector_create(sizeof(size_t));
+    if (!seeds)
+        return ESP_FAIL;
+
+    if (get_neighbors(index, epsilon, seeds) != ESP_OK) {
         vector_destroy(seeds);
         return ESP_FAIL;
     }
 
     if (seeds->size < min_points) {
-        result->cluster_ids[index] = NOISE;
+        cluster_ids[index] = NOISE;
         vector_destroy(seeds);
         return ESP_OK;
     }
 
-    result->cluster_ids[index] = cluster_id;
+    cluster_ids[index] = cluster_id;
     for (size_t i = 0; i < seeds->size; i++) {
         size_t *neighbor_idx = (size_t *)vector_get(seeds, i);
-        result->cluster_ids[*neighbor_idx] = cluster_id;
+        cluster_ids[*neighbor_idx] = cluster_id;
     }
 
     size_t seed_idx = 0;
@@ -88,7 +93,7 @@ static esp_err_t expand_cluster(dbscan_result_t *result, size_t index, int clust
             return ESP_FAIL;
         }
 
-        if (get_neighbors(result->coords, *current_idx, epsilon, neighbors) != ESP_OK) {
+        if (get_neighbors(*current_idx, epsilon, neighbors) != ESP_OK) {
             vector_destroy(neighbors);
             vector_destroy(seeds);
             return ESP_FAIL;
@@ -97,11 +102,10 @@ static esp_err_t expand_cluster(dbscan_result_t *result, size_t index, int clust
         if (neighbors->size >= min_points) {
             for (size_t j = 0; j < neighbors->size; j++) {
                 size_t *n_idx = (size_t *)vector_get(neighbors, j);
-                if (result->cluster_ids[*n_idx] == UNCLASSIFIED || result->cluster_ids[*n_idx] == NOISE) {
-                    if (result->cluster_ids[*n_idx] == UNCLASSIFIED) {
+                if (cluster_ids[*n_idx] == UNCLASSIFIED || cluster_ids[*n_idx] == NOISE) {
+                    if (cluster_ids[*n_idx] == UNCLASSIFIED)
                         vector_push_back(seeds, n_idx);
-                    }
-                    result->cluster_ids[*n_idx] = cluster_id;
+                    cluster_ids[*n_idx] = cluster_id;
                 }
             }
         }
@@ -113,11 +117,14 @@ static esp_err_t expand_cluster(dbscan_result_t *result, size_t index, int clust
     return ESP_OK;
 }
 
-static esp_err_t calculate_cluster_centers(dbscan_result_t *result) {
+
+static esp_err_t calculate_cluster_centers(
+    vector_t *cluster_centers
+) {
     int max_cluster_id = -1;
-    for (size_t i = 0; i < result->coords->size; i++) {
-        if (result->cluster_ids[i] > max_cluster_id) {
-            max_cluster_id = result->cluster_ids[i];
+    for (size_t i = 0; i < local_coords_ref->size; i++) {
+        if (cluster_ids[i] > max_cluster_id) {
+            max_cluster_id = cluster_ids[i];
         }
     }
 
@@ -125,9 +132,9 @@ static esp_err_t calculate_cluster_centers(dbscan_result_t *result) {
         float sum_x = 0, sum_y = 0;
         size_t count = 0;
 
-        for (size_t i = 0; i < result->coords->size; i++) {
-            if (result->cluster_ids[i] == cluster_id) {
-                pixel_coord_t *coord = (pixel_coord_t *)vector_get(result->coords, i);
+        for (size_t i = 0; i < local_coords_ref->size; i++) {
+            if (cluster_ids[i] == cluster_id) {
+                pixel_coord_t *coord = (pixel_coord_t *)vector_get(local_coords_ref, i);
                 sum_x += coord->x;
                 sum_y += coord->y;
                 count++;
@@ -139,56 +146,76 @@ static esp_err_t calculate_cluster_centers(dbscan_result_t *result) {
                 .x = (uint16_t)(sum_x / count + 0.5f),
                 .y = (uint16_t)(sum_y / count + 0.5f)
             };
-            vector_push_back(result->cluster_centers, &center);
+            vector_push_back(cluster_centers, &center);
         }
     }
 
     return ESP_OK;
 }
 
-esp_err_t dbscan_cluster(pixels_cloud_t *pixels_cloud, double epsilon, unsigned int min_points, dbscan_result_t *result) {
-    if (!pixels_cloud || !pixels_cloud->coords || !result) {
-        ESP_LOGE(TAG_DBSCAN, "Invalid input");
+
+static esp_err_t select_highest_center(
+    pixels_cloud_t *pixels_cloud,
+    vector_t *cluster_centers
+) {
+    if (!pixels_cloud || !cluster_centers || !cluster_centers->size) {
+        ESP_LOGE(TAG, "select_highest_center no cloud|clusters no centers ");
+        pixels_cloud->center_coord.x = 0;
+        pixels_cloud->center_coord.y = 0;
         return ESP_FAIL;
     }
 
-    if (dbscan_result_init(result, pixels_cloud->coords->size) != ESP_OK) {
+    pixel_coord_t *highest_center = NULL;
+    uint16_t min_y = UINT16_MAX;
+
+    for (size_t i = 0; i < cluster_centers->size; i++) {
+        pixel_coord_t *center = (pixel_coord_t *)vector_get(cluster_centers, i);
+        if (center->y < min_y) {
+            min_y = center->y;
+            highest_center = center;
+        }
+    }
+
+    if (highest_center) {
+        pixels_cloud->center_coord.x = highest_center->x;
+        pixels_cloud->center_coord.y = highest_center->y;
+        ESP_LOGI(TAG, "Selected highest center: (%d, %d)", pixels_cloud->center_coord.x, pixels_cloud->center_coord.y);
+        return ESP_OK;
+    }
+
+    ESP_LOGE(TAG, "select_highest_center failed to find highest center ");
+    return ESP_FAIL;
+}
+
+
+
+esp_err_t dbscan_cluster(
+    pixels_cloud_t *pixels_cloud,
+    const double epsilon,
+    const uint min_points,
+    vector_t *cluster_centers
+) {
+    if (!pixels_cloud || !pixels_cloud->coords || !cluster_centers) {
+        ESP_LOGE(TAG, "dbscan_cluster invalid input ");
         return ESP_FAIL;
     }
 
-    for (size_t i = 0; i < pixels_cloud->coords->size; i++) {
-        pixel_coord_t *coord = (pixel_coord_t *)vector_get(pixels_cloud->coords, i);
-        vector_push_back(result->coords, coord);
-    }
+    dbscan_reboot(pixels_cloud);
 
     int cluster_id = 0;
-    for (size_t i = 0; i < result->coords->size; i++) {
-        if (result->cluster_ids[i] == UNCLASSIFIED) {
-            if (expand_cluster(result, i, cluster_id, epsilon, min_points) == ESP_OK) {
+    for (size_t i = 0; i < local_coords_ref->size; i++)
+        if (cluster_ids[i] == UNCLASSIFIED)
+            if (expand_cluster(i, cluster_id, epsilon, min_points) == ESP_OK)
                 cluster_id++;
-            }
-        }
-    }
 
-    if (calculate_cluster_centers(result) != ESP_OK) {
-        dbscan_result_destroy(result);
+    esp_err_t calc_centers_err = calculate_cluster_centers(cluster_centers);
+    if (calc_centers_err != ESP_OK) {
+        ESP_LOGE(TAG, "dbscan_cluster calc centers err ");
         return ESP_FAIL;
     }
 
-    ESP_LOGI(TAG_DBSCAN, "Found %d clusters", result->cluster_centers->size);
-    return ESP_OK;
-}
+    select_highest_center(pixels_cloud, cluster_centers);
 
-esp_err_t dbscan_select_random_center(dbscan_result_t *result, pixel_coord_t *selected_center) {
-    if (!result || !result->cluster_centers || result->cluster_centers->size == 0 || !selected_center) {
-        ESP_LOGE(TAG_DBSCAN, "No clusters available");
-        return ESP_FAIL;
-    }
-
-    size_t random_idx = rand() % result->cluster_centers->size;
-    pixel_coord_t *center = (pixel_coord_t *)vector_get(result->cluster_centers, random_idx);
-    *selected_center = *center;
-
-    ESP_LOGI(TAG_DBSCAN, "Selected center: (%d, %d)", selected_center->x, selected_center->y);
+    ESP_LOGI(TAG, "Found %d clusters ", cluster_centers->size);
     return ESP_OK;
 }

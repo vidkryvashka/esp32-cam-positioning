@@ -43,7 +43,6 @@ camera_fb_t* operate_fragment(
     
     fragment = camera_fb_crop(current_frame, rect);
 
-    // keypoints_shell.need2ORB = 1;
     ESP_LOGI(TAG, "Unpaused");
 
     return fragment;
@@ -121,8 +120,8 @@ esp_err_t run_photographer()
     keypoints_shell = (keypoints_shell_t){
         .pixels_cloud = {
             .coords = vector_create(sizeof(pixel_coord_t)),
-            .center_coord = (pixel_coord_t){0, 0}
-            // .need2ORB = 0
+            .center_coord = (pixel_coord_t){0, 0},
+            .claster_centers_coords = vector_create(sizeof(pixel_coord_t))
         },
     };
     if (xTaskCreatePinnedToCore(

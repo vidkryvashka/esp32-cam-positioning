@@ -138,7 +138,7 @@ esp_err_t vector_print(
                 );
                 strcat(msg, elements_buf);
             }
-            strcat(msg, "}\n\0");
+            strcat(msg, "}\0");
 
             break;
         
