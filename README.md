@@ -21,25 +21,29 @@ This project implements a firmware for the **ESP32-CAM** microcontroller, enabli
 
 ## How It Works
 
-### Brightness Analysis Mode
-Detects the brightest pixels in an image, filters them, and calculates the center of mass. The system then computes horizontal and vertical angles to align the camera with the target (e.g., the Sun).
-
-<!-- ![Brightness Analysis](https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/look4sun.png) -->
-
-<img src="https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/esp32cam/light_in_window.png" alt="demo/esp32cam/light_in_window" width="200" height="200">
-<img src="https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/esp32cam/window_glowing_inside.png" alt="demo/esp32cam/window_glowing_inside" width="200" height="200">
-<img src="https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/esp32cam/light_inside.png" alt="demo/esp32cam/window_glowing_inside" width="400" height="400">
-
-
 ### Edge Detection Mode (FAST-9 + DBSCAN)
 Uses the **FAST-9** algorithm to detect key points and **DBSCAN** for clustering them into meaningful groups (e.g., drones). The highest cluster center is used for camera positioning.
 
 ![FAST-9 Demo](https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/fast9_early.gif)
-![FAST-9 on Laptop](https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/fast9_from_air.png)
 
-<img src="https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/esp32cam/fast9_desk.png" alt="demo/esp32cam/fast9_desk" width="200" height="200">
-<img src="https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/esp32cam/fast9_empty_window.png" alt="demo/esp32cam/fast9_empty_window" width="200" height="200">
-<img src="https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/esp32cam/fast9_dbscan_highest.png" alt="demo/esp32cam/fast9_dbscan_highest" width="400" height="400">
+*localy on laptop*
+
+<img src="https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/fast9_from_air.png" alt="demo/fast9_from_air" width="700">
+
+## pure FAST9 by esp32-cam
+<img src="https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/esp32cam/fast9_desk.png" alt="demo/esp32cam/fast9_desk" width="350" height="350"> <img src="https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/esp32cam/fast9_empty_window.png" alt="demo/esp32cam/fast9_empty_window" width="350" height="350">
+
+## DBSCAN
+<img src="https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/esp32cam/fast9_dbscan_highest.png" alt="demo/esp32cam/fast9_dbscan_highest" width="600" height="600">
+
+## Brightness Analysis Mode
+Detects the brightest pixels in an image, filters them, and calculates the center of mass. The system then computes horizontal and vertical angles to align the camera with the target (e.g., the Sun).
+
+<!-- ![Brightness Analysis](https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/look4sun.png) -->
+
+<img src="https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/esp32cam/light_in_window.png" alt="demo/esp32cam/light_in_window" width="350" height="350"> <img src="https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/esp32cam/window_glowing_inside.png" alt="demo/esp32cam/window_glowing_inside" width="350" height="350">
+
+<img src="https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/esp32cam/light_inside.png" alt="demo/esp32cam/window_glowing_inside" width="500" height="500">
 
 ---
 
@@ -91,6 +95,11 @@ The project is organized into modular components for maintainability and scalabi
 
 ## Device Appearance
 
-![Device](https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/images/device/look.jpg)
+![Device](https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/device/look.jpg)
+
+## pinout
+
+![UART pinout](https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/device/UART_pinout.jpg)
+![servo pinout](https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/device/servo_pinout.jpg)
 
 ---
