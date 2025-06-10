@@ -5,15 +5,6 @@
 #include "img_processing/camera.h"
 
 
-// /**
-//  * @brief pixel cloud with center
-//  */
-// typedef struct {
-//     vector_t *coords;
-//     pixel_coord_t center_coord;
-// } pixels_cloud_t;
-
-
 /**
  * @brief makes as called
  * 

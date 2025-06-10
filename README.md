@@ -1,68 +1,96 @@
-Application of image processing algorithms for automated device positioning
+# ESP32-CAM Automated Positioning System
 
-## How it works for now
+**Application of image processing algorithms for real-time device positioning**
 
-### mode detecting edges
-![alt text fast9](https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/working.gif)\
-#### algorithm experiments locally on laptop
-![alt text fast9](https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/fast9_from_air.png)
+This project implements a firmware for the **ESP32-CAM** microcontroller, enabling real-time image processing and automated device positioning using **FreeRTOS** and **ESP-IDF**. The system leverages computer vision algorithms to detect and track objects suspicious objects: Sun drones and controls servos for precise camera alignment. The project is developed using **PlatformIO** in **VS Code**.
 
-### mode looking for sun: finds brightest points, filters it, detects middle point of them and x y angle to turn camera towards it.
-![alt text look4sun](https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/look4sun.png)
+---
 
+## Features
 
+- **Wi-Fi Connectivity**: Connects to Wi-Fi with a prioritized list of access points and supports mDNS for easy access via `http://esp32.local`.
+- **Real-Time Image Processing**:
+  - **Brightness Analysis**: Detects the brightest points (e.g., the Sun), calculates their center of mass, and determines angles for camera alignment.
+  - **FAST-9 Algorithm**: Identifies key points (contour corners) for object detection, optimized for low-resource environments.
+  - **DBSCAN Clustering**: Groups key points to detect objects like drones, filtering noise and identifying cluster centers.
+- **Web Interface**: Hosts a web server to display images, computed data (e.g., key point coordinates), and supports interactive zooming via rectangular selection.
+- **Servo Control**: Drives **SG-90** servos for precise camera positioning based on computed angles, using PWM signals.
+- **FreeRTOS Multitasking**: Manages concurrent tasks for image capture, processing, servo control, and web server operations.
 
-# wtf
+---
 
-застаріле
-## Дипломна робота на тему
-# **Застосування алгоритмів обробки зображень для автоматичного позиціонування пристроїв**
+## How It Works
 
-## Опис
+### Brightness Analysis Mode
+Detects the brightest pixels in an image, filters them, and calculates the center of mass. The system then computes horizontal and vertical angles to align the camera with the target (e.g., the Sun).
 
-Розробляється прошивка для дешевого мікроконтролера з камерою **esp32-cam** під **FreeRTOS** з використанням розширення **PlatformIO** **VS Code**
-та фреймворку **esp-idf** (набір крос компіляторів і бібліотек). Основна частина програмного коду написана мовою **C**.
+<!-- ![Brightness Analysis](https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/look4sun.png) -->
 
-## Поточна функціональність
-
-- **Підключення до WiFi** з встановленням **mDNS hostname**, що дозволяє заходити на веб-сторінку пристрою через адресу `http://esp32.local/`.
-
-- Створення **таску фотографера**, який періодично:
-
-    - Робить знімок з камери.
-    - Обробляє зображення одним з методів.
-- Запуск власного **веб-сервера**, який хостить веб-сторінку
-
-    - Надсилає фото на веб-інтерфейс разом з обчисленими даними для візуалізації.
-    - Реалізовує можливість виділення мишкою прямокутної області на зображенні.
-- Запуск менеджера сервоприводів
-    - Наведення по куту визначеному методами обробки зображень.
+<img src="https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/esp32cam/light_in_window.png" alt="demo/esp32cam/light_in_window" width="200" height="200">
+<img src="https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/esp32cam/window_glowing_inside.png" alt="demo/esp32cam/window_glowing_inside" width="200" height="200">
+<img src="https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/esp32cam/light_inside.png" alt="demo/esp32cam/window_glowing_inside" width="400" height="400">
 
 
-## Обробка зображення
+### Edge Detection Mode (FAST-9 + DBSCAN)
+Uses the **FAST-9** algorithm to detect key points and **DBSCAN** for clustering them into meaningful groups (e.g., drones). The highest cluster center is used for camera positioning.
 
-Тут на вибір один із двох підходів:
+![FAST-9 Demo](https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/fast9_early.gif)
+![FAST-9 on Laptop](https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/fast9_from_air.png)
 
-1. **Аналіз яскравості**:
-    - Визначення області з найяскравішими пікселями і її центру.
-    - Обчислення горизонтального і вертикального кутів від центру кадру до цього центру щоб камера могла навестись.
-    - Позиціонування пристрою відбувається через сервоприводи, ще не підключено.
+<img src="https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/esp32cam/fast9_desk.png" alt="demo/esp32cam/fast9_desk" width="200" height="200">
+<img src="https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/esp32cam/fast9_empty_window.png" alt="demo/esp32cam/fast9_empty_window" width="200" height="200">
+<img src="https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/demo/esp32cam/fast9_dbscan_highest.png" alt="demo/esp32cam/fast9_dbscan_highest" width="400" height="400">
 
-2. **Алгоритм FAST9**:
-    - Визначення ключових точок (кутів контурів) на зображенні.
-    - Використовується як основа для потенційного розширення до алгоритму **ORB (Oriented Rotated BRIEF)** (все ще не реалізовано)
-        Врешті вдалось переписати FAST9 (визначення ключових точок) із **OpenCV (C++ STL)** на **C** й прикрутити до **esp32**.
+---
 
-Веб-сторінка відображає отримані координати поверх зображення.
+## Project Structure
 
-###  **Наведення**
-Використовуються 2 сервоприводи sg-90 для позиціонування **esp32-cam** по кутах вертикалі й горизонталі. Зібрана відповідна конструкція, працює
+The project is organized into modular components for maintainability and scalability:
 
-## Перспективи
-Наступні етапи спробувати втілити автоматичне розпізнавання дронів, ПТУРів.
-Часто фон не надто міняється, а ось коли на ньому починає різкіше переміщатись група ключових точок, стає підозріло.
-В разі обирання цього напрямку не знадобиться далі імплементовувати решту алгоритму ORB
+- **frontend/**: Web interface files (`index.html`, `index_src.html`) for displaying images and data.
+- **include/**: Header files with function declarations and macros.
+  - `img_processing/`: Camera, DBSCAN, FAST-9, and brightness analysis functions.
+  - `server/`: Web server, Wi-Fi, and mDNS configurations.
+  - `my_servos.h`, `my_vector.h`: Servo control and dynamic array utilities.
+- **src/**: Source files implementing core functionality.
+  - `img_processing/`: Camera initialization, image processing, and algorithm implementations.
+  - `server/`: Web server, Wi-Fi, and mDNS logic.
+  - `servos.c`, `my_vector.c`: Servo management and dynamic array operations.
+  - `main.c`: Program entry point, initializing tasks and modules.
+- **Configuration Files**:
+  - `CMakeLists.txt`: Build configuration.
+  - `Kconfig.projbuild`: Project settings (e.g., Wi-Fi credentials).
+  - `sdkconfig.esp32cam`: ESP-IDF hardware settings.
 
-# Труднощі
-Собака закопана у мові **C**, паралельному програмуванні на кількох потоках поверх двох ядер мікроконтролера.
-Часто баги проявляються зовсім не одразу й відслідковувати роботу програми доволі складно але й цікаво
+---
+
+## Technical Details
+
+### Hardware
+- **ESP32-CAM**: 32-bit dual-core processor (240 MHz, 600 DMIPS), 520 KB SRAM, 4 MB PSRAM, 2 MP OV2640 camera, Wi-Fi/Bluetooth, and microSD support.
+- **SG-90 Servos**: Two servos for pan and tilt, controlled via PWM (GPIO 14, 15).
+- **Power**: 5V supply for easy integration.
+
+### Software
+- **FreeRTOS**: Real-time operating system for multitasking, managing image capture, processing, servo control, and web server tasks.
+- **ESP-IDF**: Framework for hardware initialization, camera control, and communication.
+- **Image Processing**:
+  - **Brightness Analysis**: Optimized for GRAYSCALE, limits pixel count to 16 for efficiency.
+  - **FAST-9**: Adapted from OpenCV, uses a decision tree for fast corner detection.
+  - **DBSCAN**: Clusters key points with ε=20 pixels and min_points=3, optimized for low memory usage.
+- **Memory Management**: Custom `vector_t` structure for dynamic arrays, minimal use of PSRAM (1.45%), and high utilization of DMA-compatible DRAM (82.81%).
+
+### Challenges Overcome
+- **Limited Resources**: Optimized algorithms for 520 KB SRAM, using GRAYSCALE and minimal PSRAM.
+- **Multithreading**: Resolved deadlocks in FreeRTOS by careful mutex management and task synchronization.
+- **Algorithm Stability**: Dynamic parameter tuning for FAST-9 and DBSCAN to handle varying lighting conditions.
+- **Debugging**: Used `ESP_LOGI`, `ESP_LOGE`, and custom `log_memory` for tracking memory usage and errors.
+- **Low FPS**: Implemented `ANGLE_DIVIDER` for smoother servo movements despite low frame rates.
+
+---
+
+## Device Appearance
+
+![Device](https://github.com/vidkryvashka/esp32-cam-positioning/blob/main/images/device/look.jpg)
+
+---
