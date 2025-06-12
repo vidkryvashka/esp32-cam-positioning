@@ -61,6 +61,7 @@ static void form_wifi_points(
 }
 
 
+/*
 static esp_err_t find_wifi(void)
 {
     esp_err_t err = ESP_FAIL;
@@ -107,6 +108,63 @@ static esp_err_t find_wifi(void)
             ESP_ERROR_CHECK(esp_wifi_stop());
     }
 
+    return err;
+}
+*/
+
+
+static esp_err_t find_wifi(void)
+{
+    esp_err_t err = ESP_FAIL;
+    wifi_sta_config_t *wifi_points = (wifi_sta_config_t *)heap_caps_malloc(
+        CONFIG_ESP_WIFI_MAX_POINTS_NUMBER * sizeof(wifi_sta_config_t), 
+        MALLOC_CAP_SPIRAM
+    );
+    if (!wifi_points) {
+        ESP_LOGE(TAG, "Failed to allocate SPIRAM for wifi_points");
+        return ESP_FAIL;
+    }
+    form_wifi_points(wifi_points);
+    
+    for (uint8_t index = 0, connected = 0;
+        !connected;
+        index++
+    ) {
+        if (index >= CONFIG_ESP_WIFI_POINTS_NUMBER)
+            index = 0;
+        
+        wifi_config_t wifi_config = {
+            .sta = wifi_points[index]
+        };
+        ESP_LOGI(TAG, "Trying to connect to SSID: %s, Password: %s (index: %d) ",
+                 wifi_points[index].ssid, wifi_points[index].password, index);
+
+        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
+
+        ESP_ERROR_CHECK(esp_wifi_start());
+
+        s_retry_num = 0;
+        EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
+                                               WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
+                                               pdTRUE,
+                                               pdFALSE,
+                                               portMAX_DELAY);
+
+        if (bits & WIFI_CONNECTED_BIT) {
+            ESP_LOGI(TAG, "Successfully connected to SSID: %s ", wifi_points[index].ssid);
+            connected = 1;
+            err = ESP_OK;
+        }
+        else if (bits & WIFI_FAIL_BIT) {
+            ESP_LOGW(TAG, "Failed to connect to SSID: %s ", wifi_points[index].ssid);
+            led_blink(1, 2);
+        } else
+            ESP_LOGE(TAG, "Unexpected event during Wi-Fi connection. ");
+
+        if (!connected)
+            ESP_ERROR_CHECK(esp_wifi_stop());
+    }
+    free(wifi_points);
     return err;
 }
 

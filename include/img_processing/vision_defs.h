@@ -35,7 +35,6 @@ esp_err_t fast9(
  */
 esp_err_t find_drone(
     camera_fb_t *frame,
-    camera_fb_t *fragment,
     pixels_cloud_t *pixels_cloud
 );
 

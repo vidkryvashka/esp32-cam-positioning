@@ -15,28 +15,27 @@
 #include "server/index_html.h"
 #include "img_processing/camera.h"
 #include "img_processing/photographer.h"
+#include "esp_attr.h"
 
 #include "my_servos.h"
 
+#include "esp_attr.h"
 
-// #if DEFS_MARK_SUN == 1
+
 #if ANALISIS_MODE == MODE_FIND_SUN
     #include "img_processing/find_sun.h"
 #endif
 
-
 #define TAG "my_webserver"
 
 
-static uint16_t sending_period = PHOTOGRAPHER_DELAY_MS; // 1000;  // ms
+static uint16_t sending_period = PHOTOGRAPHER_DELAY_MS; // ms
 static httpd_handle_t server = NULL;
 #define MAX_WS_CLIENTS 3
-static int ws_clients[MAX_WS_CLIENTS] = {-1, -1, -1};
-
-static camera_fb_t *frame2send;
+static int ws_camera_clients[MAX_WS_CLIENTS] = {-1, -1, -1};
+static int ws_servo_clients[MAX_WS_CLIENTS] = {-1, -1, -1};
 
 static keypoints_shell_t *keypoints_shell_local_ref;
-
 
 static esp_err_t form_metadata_json(
     char *dest_json,
@@ -79,17 +78,19 @@ static esp_err_t form_metadata_json(
 
 
 static uint8_t ws_send_pkt(
-    httpd_ws_frame_t *ws_pkt
+    httpd_ws_frame_t *ws_pkt,
+    int *clients
 ) {
     uint8_t num_sent = 0;
     for (int i = 0; i < MAX_WS_CLIENTS; i++) {
-        if (ws_clients[i] != -1) {
-            esp_err_t ret = httpd_ws_send_frame_async(server, ws_clients[i], ws_pkt);
+        if (clients[i] != -1) {
+            esp_err_t ret = httpd_ws_send_frame_async(server, clients[i], ws_pkt);
             if (ret != ESP_OK) {
-                ESP_LOGW(TAG, "Client №%d %d disconnected", i, ws_clients[i]);
-                ws_clients[i] = -1;
-            } else
+                ESP_LOGW(TAG, "Client №%d %d disconnected", i, clients[i]);
+                clients[i] = -1;
+            } else {
                 num_sent ++;
+            }
         }
     }
     return num_sent;
@@ -99,10 +100,10 @@ static uint8_t ws_send_pkt(
 static int8_t send_meta(
     void
 ) {
-    if (!frame2send)
+    if (!current_frame)
         return 0;
 
-    uint16_t frame_width = frame2send->width, frame_height = frame2send->height;
+    uint16_t frame_width = current_frame->width, frame_height = current_frame->height;
     const uint16_t metadata_size =
             /*strlen(json_begin_format)*/ (102) +
             /*coords_arr*/ (29 * sizeof(char) * keypoints_shell_local_ref->pixels_cloud.coords->size) +
@@ -119,12 +120,12 @@ static int8_t send_meta(
     };
     ESP_LOGI(TAG, "sending metadata ");
 
-    return ws_send_pkt(&ws_metadata_pkt);
+    return ws_send_pkt(&ws_metadata_pkt, ws_camera_clients);
 }
 
 
 static int8_t send_img(
-    uint8_t *jpg_buf,   // discards const
+    uint8_t *jpg_buf,
     const size_t jpg_buf_len
 ) {
     ESP_LOGI(TAG, "jpg_buf_len = %d ", jpg_buf_len);
@@ -137,7 +138,7 @@ static int8_t send_img(
         .len = jpg_buf_len
     };
 
-    return ws_send_pkt(&ws_img_pkt);
+    return ws_send_pkt(&ws_img_pkt, ws_camera_clients);
 }
 
 
@@ -145,8 +146,7 @@ static void send_frames_task(
     void *pvParameters
 ) {
     while (true) {
-
-        if (ws_clients[0] == -1 && ws_clients[1] == -1 && ws_clients[2] == -1) {
+        if (ws_camera_clients[0] == -1 && ws_camera_clients[1] == -1 && ws_camera_clients[2] == -1) {
             vTaskDelay(pdMS_TO_TICKS(1000));
             continue;
         }
@@ -157,8 +157,8 @@ static void send_frames_task(
             continue;
         }
 
-        if (!frame2send) {
-            ESP_LOGE(TAG, "Could not access frame2send ");
+        if (!current_frame) {
+            ESP_LOGE(TAG, "Could not access current_frame ");
             xSemaphoreGive(frame_mutex);
             vTaskDelay(pdMS_TO_TICKS(PHOTOGRAPHER_DELAY_MS * 3));
             continue;
@@ -170,19 +170,17 @@ static void send_frames_task(
         
         int8_t num_meta_sent = send_meta();
 
-        if (frame2send && frame2jpg(frame2send, 12, &jpg_buf, &jpg_buf_len)) {
+        if (current_frame && frame2jpg(current_frame, 12, &jpg_buf, &jpg_buf_len)) {
+            if (jpg_buf_len >= 128*1024) {
+                ESP_LOGE(TAG, "\n\t--- send_frames_task frame2jpg corrupted memory \t abort \n ");
+                abort();
+            }
             int8_t num_img_sent = send_img(jpg_buf, jpg_buf_len);
 
             xSemaphoreGive(frame_mutex);
             frame_mutex_given = 1;
             
-            // ESP_LOGI(TAG, "free jpeg_buff ");
-            if (jpg_buf_len < 128*1024) {       // firstly 128*1024 given and shrinked in frame2jpg
-                free(jpg_buf);                 // sometimes frame2jpg determines jpg_buf_len fucking huge and writes jpg_buf idk where.
-            } else {
-                ESP_LOGE(TAG, "Invalid jpg_buf_len = %d, skipping free! ", jpg_buf_len);
-                log_memory(xPortGetCoreID());
-            }
+            free(jpg_buf);
             ESP_LOGI(TAG, "ws sent jsons %d\timgs %d ", num_meta_sent, num_img_sent);
         } else {
             ESP_LOGE(TAG, "send_frames_task JPEG conversion failed");
@@ -192,22 +190,19 @@ static void send_frames_task(
             frame_mutex_given = 1;
         }
         vTaskDelay(pdMS_TO_TICKS(sending_period));
-        frame2send = current_frame;
-
-        while (pause_photographer)
-            vTaskDelay(pdMS_TO_TICKS(200));
     }
 }
 
 
-static esp_err_t ws_handler(httpd_req_t *req)
-{
+static esp_err_t ws_camera_handler(
+    httpd_req_t *req
+) {
     if (req->method == HTTP_GET) {
         int sockfd = httpd_req_to_sockfd(req);
         for (int i = 0; i < MAX_WS_CLIENTS; i++) {
-            if (ws_clients[i] == -1) {
-                ws_clients[i] = sockfd;
-                ESP_LOGI(TAG, "New WS client №%d: %d", i, sockfd);
+            if (ws_camera_clients[i] == -1) {
+                ws_camera_clients[i] = sockfd;
+                ESP_LOGI(TAG, "New Camera WS client №%d: %d", i, sockfd);
                 break;
             }
         }
@@ -216,52 +211,58 @@ static esp_err_t ws_handler(httpd_req_t *req)
 }
 
 
+static esp_err_t ws_servo_handler(
+    httpd_req_t *req
+) {
+    if (req->method == HTTP_GET) {
+        int sockfd = httpd_req_to_sockfd(req);
+        for (int i = 0; i < MAX_WS_CLIENTS; i++) {
+            if (ws_servo_clients[i] == -1) {
+                ws_servo_clients[i] = sockfd;
+                ESP_LOGI(TAG, "New Servo WS client №%d: %d", i, sockfd);
+                break;
+            }
+        }
+    } else {
+        httpd_ws_frame_t ws_pkt;
+        uint8_t buf[32] = {0};
+        memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
+        ws_pkt.payload = buf;
+        ws_pkt.type = HTTPD_WS_TYPE_TEXT;
+        esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 32);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "httpd_ws_recv_frame failed: %d", ret);
+            return ret;
+        }
+        if (ws_pkt.len > 0) {
+            buf[ws_pkt.len] = '\0';
+            char *key = strtok((char *)buf, ",");
+            char *value_str = strtok(NULL, ",");
+            if (key && value_str) {
+                int value = atoi(value_str);
+                ESP_LOGI(TAG, "Received %s: %d", key, value);
+                angles_diff_t angles_diff = {0,0};
+                if (strcmp(key, "Pan") == 0) {
+                    angles_diff.pan = value;
+                } else if (strcmp(key, "Tilt") == 0) {
+                    angles_diff.tilt = value;
+                }
 
-static esp_err_t get_req_handler(httpd_req_t *req)
-{
+                if (are_servos_inited && servo_queue)
+                    if (xQueueSend(servo_queue, (void *)&angles_diff, 10) != pdTRUE)
+                        ESP_LOGE(TAG, "\t\t--- servo_actions couldn't xQueueSend, queue fill ");
+            }
+        }
+    }
+    return ESP_OK;
+}
+
+
+static esp_err_t get_req_handler(
+    httpd_req_t *req
+) {
     ESP_LOGI(TAG, " -- sent page -- ");
     return httpd_resp_send(req, (const char *)frontend_index_html, frontend_index_html_len);
-}
-
-
-static esp_err_t pause_handler(httpd_req_t *req)
-{
-    pause_photographer = 1;
-    httpd_resp_send(req, "Paused", 6);
-    return ESP_OK;
-}
-
-
-static esp_err_t rect_handler(httpd_req_t *req)
-{
-    char buf[128];
-    int ret = httpd_req_recv(req, buf, sizeof(buf) - 1);
-    if (ret <= 0) {
-        httpd_resp_send_500(req);
-        return ESP_FAIL;
-    }
-    buf[ret] = '\0';
-
-    rectangle_coords_t rect_coords;
-    if (sscanf(buf, "{\"topLeftX\":%hu,\"topLeftY\":%hu,\"width\":%hu,\"height\":%hu}",
-           &rect_coords.top_left.x, &rect_coords.top_left.y, &rect_coords.width, &rect_coords.height
-    ) >= 0) {
-        char resp[] = "Got rectangle coords";
-        httpd_resp_send(req, resp, strlen(resp));
-    }
-
-    if (xSemaphoreTake(frame_mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
-        ESP_LOGE(TAG, "Failed to take frame_mutex on fragment");
-        return ESP_FAIL;
-    } else
-        frame2send = operate_fragment(&rect_coords);
-    xSemaphoreGive(frame_mutex);
-    pause_photographer = 0;
-
-    log_memory(xPortGetCoreID());
-    // servo_actions();
-
-    return ESP_OK;
 }
 
 
@@ -272,49 +273,50 @@ static httpd_uri_t uri_get = {
     .user_ctx = NULL
 };
 
-static httpd_uri_t uri_ws = {
+static httpd_uri_t uri_ws_camera = {
     .uri = "/ws",
     .method = HTTP_GET,
-    .handler = ws_handler,
+    .handler = ws_camera_handler,
     .user_ctx = NULL,
     .is_websocket = true
 };
 
-static httpd_uri_t uri_pause = {
-    .uri = "/pause",
+static httpd_uri_t uri_ws_servo = {
+    .uri = "/ServoInput",
     .method = HTTP_GET,
-    .handler = pause_handler,
-    .user_ctx = NULL
+    .handler = ws_servo_handler,
+    .user_ctx = NULL,
+    .is_websocket = true
 };
 
 
-static httpd_uri_t uri_set_rect = {
-    .uri = "/set-rect",
-    .method = HTTP_POST,
-    .handler = rect_handler,
-    .user_ctx = NULL
-};
-
-static esp_err_t setup_server(void) {
+static esp_err_t setup_server(
+    void
+) {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.core_id = 1;
-    config.stack_size = 2 << 13; // bigger for WebSocket
-
-    frame2send = current_frame;
+    config.stack_size = 12288; // 8192;
     keypoints_shell_local_ref = get_keypoints_shell_reference();
 
     esp_err_t server_err = httpd_start(&server, &config);
 
     httpd_register_uri_handler(server, &uri_get);
-    httpd_register_uri_handler(server, &uri_ws);
-    httpd_register_uri_handler(server, &uri_pause);
-    httpd_register_uri_handler(server, &uri_set_rect);
-    xTaskCreatePinnedToCore(send_frames_task, "send_frames_task", 4096, NULL, 5, NULL, 1);
+    httpd_register_uri_handler(server, &uri_ws_camera);
+    httpd_register_uri_handler(server, &uri_ws_servo);
+    xTaskCreatePinnedToCore(send_frames_task,
+                            "send_frames_task",
+                            8096,
+                            NULL, 5,
+                            NULL,
+                            1);
 
     return server_err;
 }
 
-esp_err_t server_up()
+
+esp_err_t server_up(
+    void
+)
 {
     esp_err_t err = ESP_FAIL;
     esp_err_t wifi_err = local_start_wifi();

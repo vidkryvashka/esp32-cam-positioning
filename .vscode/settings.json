@@ -46,7 +46,8 @@
         "ledc.h": "c",
         "functional": "c",
         "my_vector.h": "c",
-        "vision_defs.h": "c"
+        "vision_defs.h": "c",
+        "esp_attr.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

@@ -18,8 +18,7 @@
 volatile bool pause_photographer = 0;   // extern declared in img_processing/photographer.h, used in webserver.c
 volatile SemaphoreHandle_t frame_mutex;
 camera_fb_t *current_frame = NULL;      // extern declared in camera.h
-static camera_fb_t *fragment = NULL;
-QueueHandle_t servo_queue;
+QueueHandle_t servo_queue = 0;
 static keypoints_shell_t keypoints_shell;
 
 
@@ -27,25 +26,6 @@ static keypoints_shell_t keypoints_shell;
 keypoints_shell_t* get_keypoints_shell_reference()
 {
     return &keypoints_shell;
-}
-
-
-camera_fb_t* operate_fragment(
-    const rectangle_coords_t *rect
-) {
-    ESP_LOGI(TAG, "Rectangle coordinates: Top left: (%d, %d), width: %d, height: %d)", 
-            rect->top_left.x, rect->top_left.y, rect->width, rect->height);
-    
-    if (fragment != NULL) {
-        ESP_LOGI(TAG, "free fragment on replace ");
-        camera_fb_free(fragment);
-    }
-    
-    fragment = camera_fb_crop(current_frame, rect);
-
-    ESP_LOGI(TAG, "Unpaused");
-
-    return fragment;
 }
 
 
@@ -70,7 +50,7 @@ static esp_err_t take_analize_photo()
 #if ANALISIS_MODE == MODE_FIND_SUN
     mark_sun(&keypoints_shell.pixels_cloud, current_frame, &angles_diff);
 #elif ANALISIS_MODE == MODE_FAST9
-    find_drone(current_frame, fragment, &keypoints_shell.pixels_cloud);
+    find_drone(current_frame, &keypoints_shell.pixels_cloud);
 #endif
 
     ESP_LOGI(TAG, "analized frame ");

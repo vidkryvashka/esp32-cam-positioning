@@ -12,7 +12,7 @@ void app_main(void)
     init_esp_things();
 
     init_camera();
+    run_servo_manager();
     run_photographer();
-    server_up();
-    // run_servo_manager();
+    // server_up();
 }

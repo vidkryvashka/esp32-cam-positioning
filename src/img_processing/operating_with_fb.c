@@ -2,6 +2,7 @@
 
 #define TAG "my_operating_with_fb"
 
+
 camera_fb_t* camera_fb_create(
     const uint16_t width,
     const uint16_t height,

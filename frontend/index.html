@@ -54,18 +54,46 @@
       width: 480px;
       pointer-events: auto;
     }
-    button {
-      margin-top: 1rem;
-      padding: 0.5rem 1rem;
-      font-size: 1rem;
-      background-color: #4fc3f7;
-      border: none;
+    .slidecontainer {
+      padding-top: 2rem;
+      width: 100%;
+      display: flex;
+    }
+    .slidecontainer label {
+      padding-left: 0.5rem;
+      text-align: left;
+      width: 5rem;
+      font-size: 1.2rem;
+    }
+    .slider {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 0.7rem;
       border-radius: 0.5rem;
-      color: #fff;
+      background: #d3d3d3;
+      outline: none;
+      opacity: 0.7;
+      -webkit-transition: .2s;
+      transition: opacity .2s;
+    }
+    .slider:hover {
+      opacity: 1;
+    }
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 2rem;
+      height: 2rem;
+      border-radius: 50%;
+      background: red;
       cursor: pointer;
     }
-    button:hover {
-      background-color: #039be5;
+    .slider::-moz-range-thumb {
+      width: 2rem;
+      height: 2rem;
+      border-radius: 50%;
+      background: red;
+      cursor: pointer;
     }
   </style>
   <link rel="icon" href="data:,">
@@ -79,43 +107,54 @@
         <img id="camera-feed" src="">
         <canvas id="overlay"></canvas>
       </div>
-      <button id="toggle-rect-mode">Select Rectangle</button>
+      <div id="sliders">
+        <div class="slidecontainer">
+          <label for="Tilt">Tilt:</label>
+          <input type="range" min="0" max="180" value="90" class="slider" id="Tilt" onchange='handleSliderChange("Tilt", this.value)'>
+        </div>
+        <div class="slidecontainer">
+          <label for="Pan">Pan:</label>
+          <input type="range" min="0" max="180" value="90" class="slider" id="Pan" onchange='handleSliderChange("Pan", this.value)'>
+        </div>
+      </div>
     </div>
   </div>
-</body>
 <script>
-let iamgeWidth = 240;
+let imageWidth = 240;
 let imageHeight = 240;
 let canvasWidth = 480;
 let canvasHeight = 480;
 const coeff = imageHeight / canvasHeight;
-let isRectMode = false;
-let startX, startY, endX, endY;
 const canvas = document.getElementById('overlay');
 canvas.width = canvasWidth;
 canvas.height = canvasHeight;
 const ctx = canvas.getContext('2d');
-let ws = null;
+let wsCamera = null;
+let wsServoInput = null;
+let lastSendServoTime = 0;
+const THROTTLE_SERVO_INTERVAL = 200;
+const INITIAL_SLIDER_VALUE = 90;
 
-function connectWebSocket() {
-  // if (ws == -1)
-    ws = new WebSocket(`ws://${window.location.hostname}/ws`);
-  ws.onopen = () => {
-    console.log('WebSocket connected');
+function connectCameraWebSocket() {
+  wsCamera = new WebSocket(`ws://${window.location.hostname}/ws`);
+  wsCamera.binaryType = 'blob';
+  wsCamera.onopen = () => {
+    console.log('Camera WebSocket connected');
   };
-  ws.onmessage = (event) => {
+  wsCamera.onmessage = (event) => {
     if (typeof event.data === 'string') {
       try {
         const metadata = JSON.parse(event.data);
-        if (metadata.type == "metadata") {
+        if (metadata.type === "metadata") {
           imageWidth = metadata.width;
           imageHeight = metadata.height;
           if (metadata && metadata.coords) {
             console.log('metadata:', metadata);
             drawCoords(metadata);
           }
-        } else
+        } else {
           console.log("unsupported metadata type ", metadata.type);
+        }
       } catch (e) {
         console.error('Error parsing json:', e);
       }
@@ -124,12 +163,26 @@ function connectWebSocket() {
       img.src = URL.createObjectURL(event.data);
     }
   };
-  ws.onclose = () => {
-    console.log('WebSocket disconnected, reconnecting...');
-    setTimeout(connectWebSocket, 2000);
+  wsCamera.onclose = () => {
+    console.log('Camera WebSocket disconnected, reconnecting...');
+    setTimeout(connectCameraWebSocket, 2000);
   };
-  ws.onerror = (error) => {
-    console.error('WebSocket error:', error);
+  wsCamera.onerror = (error) => {
+    console.error('Camera WebSocket error:', error);
+  };
+}
+
+function connectServoInputWebSocket() {
+  wsServoInput = new WebSocket(`ws://${window.location.hostname}/ServoInput`);
+  wsServoInput.onopen = () => {
+    console.log('ServoInput WebSocket connected');
+  };
+  wsServoInput.onclose = () => {
+    console.log('ServoInput WebSocket disconnected, reconnecting...');
+    setTimeout(connectServoInputWebSocket, 2000);
+  };
+  wsServoInput.onerror = (error) => {
+    console.error('ServoInput WebSocket error:', error);
   };
 }
 
@@ -155,81 +208,27 @@ function drawCoords(metadata) {
   }
 }
 
-function drawRectangle(x1, y1, x2, y2) {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.strokeStyle = 'yellow';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.rect(x1, y1, x2 - x1, y2 - y1);
-  ctx.stroke();
-}
-
-function sendRectangleCoords(topLeftX, topLeftY, width, height) {
-  const data = {
-    topLeftX: Math.round(topLeftX),
-    topLeftY: Math.round(topLeftY),
-    width: Math.round(width),
-    height: Math.round(height)
-  };
-  fetch('/set-rect', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(data)
-  })
-  .then(response => response.text())
-  .then(text => console.log('Server response:', text))
-  .catch(error => console.error('Error sending coords:', error));
-}
-
-canvas.addEventListener('mousedown', (e) => {
-  if (!isRectMode) return;
-  const rect = canvas.getBoundingClientRect();
-  startX = e.clientX - rect.left;
-  startY = e.clientY - rect.top;
-});
-
-canvas.addEventListener('mousemove', (e) => {
-  if (!isRectMode || startX === undefined) return;
-  const rect = canvas.getBoundingClientRect();
-  endX = e.clientX - rect.left;
-  endY = e.clientY - rect.top;
-  drawRectangle(startX, startY, endX, endY);
-});
-
-canvas.addEventListener('mouseup', (e) => {
-  if (!isRectMode || startX === undefined) return;
-  const rect = canvas.getBoundingClientRect();
-  endX = e.clientX - rect.left;
-  endY = e.clientY - rect.top;
-
-  const topLeftX = Math.min(startX, endX) * coeff;
-  const topLeftY = Math.min(startY, endY) * coeff;
-  const bottomRightX = Math.max(startX, endX) * coeff;
-  const bottomRightY = Math.max(startY, endY) * coeff;
-  const width = bottomRightX - topLeftX;
-  const height = bottomRightY - topLeftY;
-
-  sendRectangleCoords(topLeftX, topLeftY, width, height);
-
-  isRectMode = false;
-  document.getElementById('toggle-rect-mode').textContent = 'Select Rectangle';
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  startX = startY = endX = endY = undefined;
-});
-
-document.getElementById('toggle-rect-mode').addEventListener('click', () => {
-  isRectMode = !isRectMode;
-  document.getElementById('toggle-rect-mode').textContent = isRectMode ? 'Selecting...' : 'Select Rectangle';
-  if (isRectMode) {
-    fetch('/pause')
-      .then(response => response.text())
-      .then(text => console.log('Photographer paused:', text))
-      .catch(error => console.error('Error pausing:', error));
+function handleSliderChange(key, value) {
+  const currentTime = Date.now();
+  if (currentTime - lastSendServoTime >= THROTTLE_SERVO_INTERVAL) {
+    if (wsServoInput && wsServoInput.readyState === WebSocket.OPEN) {
+      const diff = parseInt(value) - INITIAL_SLIDER_VALUE;
+      const data = `${key},${diff}`;
+      wsServoInput.send(data);
+      console.log(`Sent ${data}`);
+      lastSendServoTime = currentTime;
+    } else {
+      console.warn('ServoInput WebSocket not connected');
+    }
   }
-});
+  // Reset slider to initial position (90)
+  document.getElementById(key).value = INITIAL_SLIDER_VALUE;
+}
 
-connectWebSocket();
+window.onload = () => {
+  connectCameraWebSocket();
+  connectServoInputWebSocket();
+};
 </script>
+</body>
 </html>
