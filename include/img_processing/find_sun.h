@@ -14,8 +14,7 @@
  */
 esp_err_t mark_sun(
     pixels_cloud_t *pixels_cloud,
-    const camera_fb_t *frame,
-    angles_diff_t *angles_diff
+    const camera_fb_t *frame
 );
 
 

@@ -74,11 +74,11 @@ typedef struct {
  * @brief calculates X Y degrees from point to center of frame
  * 
  * @param coord input point
- * @param angles to write - output float array must be size 2
+ * @param angles to write
  * @return errors
  */
 esp_err_t calculate_angles_diff(
-    const pixel_coord_t *sun_coord,
+    const pixel_coord_t *coord,
     angles_diff_t *angles_diff
 );
 

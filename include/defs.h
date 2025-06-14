@@ -16,16 +16,19 @@
 
 #define BOARD "esp32"
 
-// typedef enum {
-//     MODE_FIND_SUN,
-//     MODE_FAST9
-// } analisis_modes;
-#define MODE_FIND_SUN   0
-#define MODE_FAST9      1
+#define PHOTOGRAPHER_DELAY_MS 1000
 
-#define ANALISIS_MODE MODE_FIND_SUN
+// #define MODE_FIND_SUN   0
+// #define MODE_FAST9      1
 
-#define MEMORY_LOG_PROBABILITY_DIVIDER 7
+typedef enum {
+    MODE_FIND_SUN = 0,
+    MODE_FAST9
+} analysis_mode_t;
+
+#define ANALISIS_MODE MODE_FAST9
+
+#define MEMORY_LOG_PROBABILITY_DIVIDER 10
 
 
 /** 

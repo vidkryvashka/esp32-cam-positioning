@@ -54,6 +54,7 @@ esp_err_t find_drone(
 
     if (pixels_cloud->coords->size == 0) {
         ESP_LOGW(TAG, "find_drone \t no keypoints found ");
+        pixels_cloud->center_coord = (pixel_coord_t){0, 0};
         return ESP_OK;
     }
 
@@ -72,13 +73,6 @@ esp_err_t find_drone(
 
     ESP_LOGI(TAG, "dbscan clasters centers ");
     vector_print(cluster_centers);
-
-
-    // if (dbscan_select_random_center(&dbscan_result, &pixels_cloud->center_coord) != ESP_OK) {
-    //     ESP_LOGE(TAG, "Failed to select random cluster center");
-    //     dbscan_result_destroy(&dbscan_result);
-    //     return ESP_FAIL;
-    // }
 
     ESP_LOGI(TAG, "Drone center: (%d, %d)", 
              pixels_cloud->center_coord.x, pixels_cloud->center_coord.y);

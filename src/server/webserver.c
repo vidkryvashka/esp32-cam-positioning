@@ -39,7 +39,7 @@ static keypoints_shell_t *keypoints_shell_local_ref;
 
 static esp_err_t form_metadata_json(
     char *dest_json,
-    const uint16_t metadata_size,
+    const uint16_t metadata_json_len,
     const uint16_t frame_width,
     const uint16_t frame_height
 ) {
@@ -47,7 +47,7 @@ static esp_err_t form_metadata_json(
     char format[] = "{\"type\":\"metadata\",\"img-size\":{\"width\":%d,\"height\":%d},\"center\":{\"x\":%d,\"y\":%d},\"count\":%zu,\"coords\":[";
     pixels_cloud_t *pixels_cloud = &keypoints_shell_local_ref->pixels_cloud;
     vector_t *coords = pixels_cloud->coords;
-    snprintf(dest_json, metadata_size,
+    snprintf(dest_json, metadata_json_len,
             format,
             frame_width, frame_height,
             pixels_cloud->center_coord.x,
@@ -104,13 +104,14 @@ static int8_t send_meta(
         return 0;
 
     uint16_t frame_width = current_frame->width, frame_height = current_frame->height;
-    const uint16_t metadata_size =
+    const uint16_t metadata_json_len =
             /*strlen(json_begin_format)*/ (102) +
-            /*coords_arr*/ (29 * sizeof(char) * keypoints_shell_local_ref->pixels_cloud.coords->size) +
+            /*coords_arr*/ (30 * sizeof(char) * keypoints_shell_local_ref->pixels_cloud.coords->size) +
             /*aware boundries*/ 16;
-    ESP_LOGI(TAG, "metadata size %d ", metadata_size);
-    char metadata_json[metadata_size];
-    form_metadata_json(metadata_json, metadata_size, frame_width, frame_height);
+    ESP_LOGI(TAG, "metadata size %d ", metadata_json_len);
+    // char metadata_json[metadata_json_len];
+    char *metadata_json = heap_caps_malloc(metadata_json_len * sizeof(char) * metadata_json_len, MALLOC_CAP_SPIRAM);
+    form_metadata_json(metadata_json, metadata_json_len, frame_width, frame_height);
     httpd_ws_frame_t ws_metadata_pkt = {
         .final = true,
         .fragmented = false,
@@ -120,7 +121,11 @@ static int8_t send_meta(
     };
     ESP_LOGI(TAG, "sending metadata ");
 
-    return ws_send_pkt(&ws_metadata_pkt, ws_camera_clients);
+    uint8_t num_sent = ws_send_pkt(&ws_metadata_pkt, ws_camera_clients);
+
+    if (metadata_json)
+        heap_caps_free(metadata_json);
+    return num_sent;
 }
 
 

@@ -15,8 +15,6 @@
 extern volatile bool pause_photographer; // initiated in photographer.c, used in photographer_task, then in webserver.c
 // extern volatile SemaphoreHandle_t pause_photographer_mutex; // like an idea
 
-#define PHOTOGRAPHER_DELAY_MS 1000
-
 
 typedef struct {
     pixels_cloud_t pixels_cloud;

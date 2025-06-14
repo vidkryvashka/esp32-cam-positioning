@@ -21,7 +21,7 @@
 #define SERVO_PAN_ANGLE_BOTTOM      0
 #define SERVO_PAN_ANGLE_TOP         180
 #define SERVO_TILT_ANGLE_BOTTOM     50
-#define SERVO_TILT_ANGLE_TOP        180
+#define SERVO_TILT_ANGLE_TOP        150
 
 #define ANGLE_DIVIDER   1.2
 
@@ -239,7 +239,7 @@ static esp_err_t set_duties(
             angle2duty((double)target_pan_angle / ANGLE_DIVIDER),
             MY_HPOINT
         );
-    vTaskDelay(pdMS_TO_TICKS(20));
+    vTaskDelay(pdMS_TO_TICKS(100));
     if (angles_diff->tilt != 0)
         pwm_err |= ledc_set_duty_and_update(
             SERVOS_SPEED_MODE,
@@ -247,22 +247,6 @@ static esp_err_t set_duties(
             angle2duty((double)target_tilt_angle / ANGLE_DIVIDER),
             MY_HPOINT
         );
-    
-    // if (angles_diff->pan != 0)
-    //     pwm_err |= ledc_set_fade_with_time(
-    //         SERVOS_SPEED_MODE,
-    //         SERVO_PAN_CH,
-    //         angle2duty(target_pan_angle / ANGLE_DIVIDER),
-    //         pdMS_TO_TICKS(200)
-    //     );
-    // vTaskDelay(pdMS_TO_TICKS(20));
-    // if (angles_diff->tilt != 0)
-    //     pwm_err |= ledc_set_fade_with_time(
-    //         SERVOS_SPEED_MODE,
-    //         SERVO_TILT_CH,
-    //         angle2duty(target_tilt_angle / ANGLE_DIVIDER),
-    //         pdMS_TO_TICKS(200)
-    //     );
 
     curr_pan_angle = target_pan_angle;
     curr_tilt_angle = target_tilt_angle;
@@ -328,7 +312,7 @@ esp_err_t run_servo_manager()
     BaseType_t task_created = xTaskCreatePinnedToCore(
                     &servo_manager_task,
                     "servo_manager_task",
-                    8192,
+                    4092,
                     NULL,
                     7,
                     NULL,
@@ -337,5 +321,8 @@ esp_err_t run_servo_manager()
         ESP_LOGE(TAG, "Failed to create servo_manager_task ");
         return ESP_FAIL;
     }
+
+    vTaskDelay(pdMS_TO_TICKS(1000));
+
     return servos_err;
 }

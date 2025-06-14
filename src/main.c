@@ -11,8 +11,8 @@ void app_main(void)
 {
     init_esp_things();
 
-    init_camera();
     run_servo_manager();
+    init_camera();
     run_photographer();
     // server_up();
 }

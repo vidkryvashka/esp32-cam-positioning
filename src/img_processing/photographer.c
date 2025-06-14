@@ -22,7 +22,6 @@ QueueHandle_t servo_queue = 0;
 static keypoints_shell_t keypoints_shell;
 
 
-
 keypoints_shell_t* get_keypoints_shell_reference()
 {
     return &keypoints_shell;
@@ -31,9 +30,10 @@ keypoints_shell_t* get_keypoints_shell_reference()
 
 static esp_err_t take_analize_photo()
 {
+    esp_err_t err = ESP_OK;
+
     if (xSemaphoreTake(frame_mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
         ESP_LOGE(TAG, "take_photo() failed to take frame_mutex ");
-        // log_memory(1);  // another (webserver) core
         return ESP_FAIL;
     }
 
@@ -43,29 +43,44 @@ static esp_err_t take_analize_photo()
     ESP_LOGI(TAG, "returned frame ");
 
     current_frame = esp_camera_fb_get();
+    if (!current_frame) {
+        xSemaphoreGive(frame_mutex);
+        ESP_LOGI(TAG, "take_analize_photo \t couldn't esp_camera_fb_get() ");
+        return ESP_FAIL;
+    }
+    
     ESP_LOGI(TAG, "took frame ");
 
     angles_diff_t angles_diff = {0,0};
 
 #if ANALISIS_MODE == MODE_FIND_SUN
-    mark_sun(&keypoints_shell.pixels_cloud, current_frame, &angles_diff);
+    err |= mark_sun(&keypoints_shell.pixels_cloud, current_frame);
 #elif ANALISIS_MODE == MODE_FAST9
-    find_drone(current_frame, &keypoints_shell.pixels_cloud);
+    err |= find_drone(current_frame, &keypoints_shell.pixels_cloud);
 #endif
-
-    ESP_LOGI(TAG, "analized frame ");
+    
+    if (err)
+        ESP_LOGI(TAG, "take_analize_photo \t mark_sun || find drone failed ");
+    
+    ESP_LOGI(TAG, "center %d %d ", keypoints_shell.pixels_cloud.center_coord.x , keypoints_shell.pixels_cloud.center_coord.y);
 
     xSemaphoreGive(frame_mutex);
 
+    if (keypoints_shell.pixels_cloud.center_coord.x != 0 || keypoints_shell.pixels_cloud.center_coord.y != 0)
+        err |=  calculate_angles_diff(&keypoints_shell.pixels_cloud.center_coord, &angles_diff);
+    else
+        return ESP_OK;
+
+    if (err) {
+        ESP_LOGE(TAG, "take_analize_photo \t got calculate_angles_diff err ");
+        return ESP_FAIL;
+    } else
+        ESP_LOGI(TAG, "analized frame ");
+
     if (are_servos_inited && (abs(angles_diff.pan) > ANGLE_THRESHOLD || abs(angles_diff.tilt) > ANGLE_THRESHOLD))
         if (xQueueSend(servo_queue, (void *)&angles_diff, 10) != pdTRUE) {
-            ESP_LOGE(TAG, "\t\t--- servo_actions couldn't xQueueSend, queue fill ");
+            ESP_LOGE(TAG, "take_analize_photo \t\t --- couldn't xQueueSend, queue fill ");
         }
-    
-    ESP_LOGI(TAG, "take_photo%s", current_frame != NULL ? ", got fb" : ", fail");
-
-    if (!current_frame)
-        return ESP_FAIL;
     
     return ESP_OK;
 }
