@@ -47,7 +47,8 @@
         "functional": "c",
         "my_vector.h": "c",
         "vision_defs.h": "c",
-        "esp_attr.h": "c"
+        "esp_attr.h": "c",
+        "esp_timer.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

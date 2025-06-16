@@ -23,8 +23,9 @@
 #define LED_OFF()   gpio_set_level(LED_PIN, 1)
 
 
-static esp_err_t init_gpio(void)
-{
+static esp_err_t init_gpio(
+    void
+) {
     esp_err_t err = ESP_FAIL;
     gpio_reset_pin(LED_PIN);
     gpio_set_direction(LED_PIN, GPIO_MODE_OUTPUT);
@@ -35,8 +36,9 @@ static esp_err_t init_gpio(void)
 }
 
 
-esp_err_t init_esp_things(void)
-{
+esp_err_t init_esp_things(
+    void
+) {
     esp_err_t gpio_err = init_gpio();
     ESP_ERROR_CHECK(gpio_err);
 
@@ -49,18 +51,18 @@ esp_err_t init_esp_things(void)
     }
     ESP_ERROR_CHECK(nvs_flash_err);
 
-    // esp_err_t servos_err = init_my_servos();
-    // ESP_ERROR_CHECK(servos_err);
-
     esp_err_t err = gpio_err & nvs_flash_err; // & servos_err;
+    vTaskDelay(pdMS_TO_TICKS(500));
 
     return err;
 }
 
 
-void led_blink(float periods, uint8_t count)
-{
-    for (uint8_t def_i = 0; def_i < count; def_i++) {
+void led_blink(
+    float periods,
+    uint8_t count
+) {
+    for (uint8_t i = 0; i < count; i++) {
         LED_ON();
         vTaskDelay(BLINK_PERIOD * periods);
         LED_OFF();
@@ -72,7 +74,6 @@ void led_blink(float periods, uint8_t count)
 void log_memory(
     BaseType_t core_id
 ) {
-    // Масив з усіма типами пам'яті, які потрібно перевірити
     const uint32_t caps[] = {
         MALLOC_CAP_EXEC,
         MALLOC_CAP_32BIT,
@@ -107,13 +108,12 @@ void log_memory(
         NULL
     };
 
-    ESP_LOGI(TAG, "Memory usage for core %d %s:", core_id, core_id ? "webserver" : "photographer");     // core 0 pinned to photographer, core 1 pinned to webserver
-    for (int i = 0; caps[i] != 0; i++) {
+    ESP_LOGI(TAG, "Memory usage for core %d %s:", core_id, core_id ? "webserver" : "photographer");     // core 0 pinned to photographer & analysers, core 1 pinned to webserver
+    for (int i = 0; caps[i]; i++) {
         size_t free_size = heap_caps_get_free_size(caps[i]);
         size_t total_size = heap_caps_get_total_size(caps[i]);
         size_t used_size = total_size - free_size;
 
-        // Виводимо тільки ті типи пам'яті, які мають ненульовий розмір
         if (total_size > 0) {
             float used_percent = (float)used_size * 100 / (float)total_size;
             ESP_LOGI(TAG, "\t\t%s: used %d / %d (%.2f%%)", cap_names[i], used_size, total_size, used_percent);

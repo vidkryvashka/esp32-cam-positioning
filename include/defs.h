@@ -13,22 +13,22 @@
 #include "driver/gpio.h"
 
 
-
 #define BOARD "esp32"
 
-#define PHOTOGRAPHER_DELAY_MS 1000
+#define PHOTOGRAPHER_DELAY_MS 500
 
-// #define MODE_FIND_SUN   0
-// #define MODE_FAST9      1
 
-typedef enum {
-    MODE_FIND_SUN = 0,
-    MODE_FAST9
-} analysis_mode_t;
-
-#define ANALISIS_MODE MODE_FAST9
+// typedef enum {           // doesn't work good with other directives
+//     MODE_FIND_SUN,
+//     MODE_FAST9
+// } analysis_mode_t;
+#define MODE_FIND_SUN   0
+#define MODE_FAST9      1
+#define ANALYSIS_MODE MODE_FAST9
 
 #define MEMORY_LOG_PROBABILITY_DIVIDER 10
+
+#define LOG_FREE        0
 
 
 /** 

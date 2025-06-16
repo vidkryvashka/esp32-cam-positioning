@@ -17,6 +17,9 @@
 #define TAG "my_camera"
 
 
+#define LOCAL_LOG_LEVEL     0
+
+
 static camera_config_t camera_config = {
     .pin_pwdn = 32,
     .pin_reset = -1,    // software reset will be performed
@@ -60,8 +63,9 @@ static camera_config_t camera_config = {
 uint16_t frame_width;
 uint16_t frame_height;
 
-esp_err_t init_camera(void)
-{
+esp_err_t init_camera(
+    void
+) {
     esp_err_t err = esp_camera_init(&camera_config);
     sensor_t *s = esp_camera_sensor_get();
     s->set_vflip(s, 1);
@@ -94,6 +98,8 @@ esp_err_t init_camera(void)
             break;
     }
 
+    vTaskDelay(pdMS_TO_TICKS(500));
+
     return ESP_OK;
 }
 
@@ -115,7 +121,9 @@ esp_err_t calculate_angles_diff(
     angles_diff->pan = (int16_t)(atanf((double)diff_x / (double)frame_width / (double)2 / tan26_degrees) * (double)90 / M_PI_2); // mirroring
     angles_diff->tilt = (int16_t)(atanf((double)diff_y / (double)frame_height / (double)2 / tan26_degrees) * (double)90 / -M_PI_2);
 
-    ESP_LOGI(TAG, "angles_diff x: %d° y: %df°", angles_diff->pan, angles_diff->tilt);
+    #if LOCAL_LOG_LEVEL
+        ESP_LOGI(TAG, "angles_diff x: %d° y: %df°", angles_diff->pan, angles_diff->tilt);
+    #endif
 
     return ESP_OK;
 }

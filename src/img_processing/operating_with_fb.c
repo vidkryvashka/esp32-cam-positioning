@@ -18,7 +18,7 @@ camera_fb_t* camera_fb_create(
 
     fb->buf = (uint8_t*)heap_caps_malloc(buffer_size, MALLOC_CAP_SPIRAM);
     if (fb->buf == NULL) {
-        ESP_LOGI(TAG, "free fb coz failed alloc buff ");
+        ESP_LOGI(TAG, "camera_fb_create \t\t free fb coz failed alloc buff ");
         heap_caps_free(fb);
         return NULL;
     }
@@ -57,12 +57,17 @@ void camera_fb_free(
 ) {
     if (fb == NULL)
         return;
+    #if LOG_FREE
+        ESP_LOGI(TAG, "camera_fb_free \t free buf & frame ");
+    #endif
     if (fb->buf != NULL) {
         heap_caps_free(fb->buf);
         fb->buf = NULL;
     }
-    ESP_LOGI(TAG, "free fb camera_fb_free ");
     heap_caps_free(fb);
+    #if LOG_FREE
+        ESP_LOGI(TAG, "camera_fb_free \t fried buf & frame ");
+    #endif
 }
 
 

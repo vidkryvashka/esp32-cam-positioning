@@ -1,12 +1,9 @@
-#ifndef ORB_DEFS_H
-#define ORB_DEFS_H
+#ifndef VISION_DEFS_H
+#define VISION_DEFS_H
 
 #include "defs.h"
 #include "my_vector.h"
 #include "img_processing/camera.h"
-
-
-#define SAVIMG_IMAGE_DIM_COEF 0.4
 
 
 
@@ -25,17 +22,49 @@ esp_err_t fast9(
 
 
 /**
- * @brief 
+ * @brief Performs DBSCAN clustering and returns cluster centers
+ * @param pixels_cloud Input data (point coordinates)
+ * @param epsilon Maximum distance between points in the same cluster
+ * @param min_points Minimum number of points to form a cluster
+ * @param result Clustering result (includes cluster centers)
+ * @return ESP_OK on success, otherwise ESP_FAIL
+ */
+esp_err_t dbscan_cluster(
+    pixels_cloud_t *pixels_cloud,
+    const uint8_t epsilon,
+    uint16_t min_points,
+    vector_t *cluster_centers
+);
+
+
+/**
+ * @brief writes nfo about drone consisting analysis into pixels_cloud
  * 
- * @param frame     big one
- * @param fragment  consider smaller image
-//  * @param top_left  forgot why
- * @param pixels_cloud global messy variable to send it to web page
- * @return          err
+ * @param frame         to analyze
+ * @param pixels_cloud  global messy variable, may be sent to web page
+ * @return              esp_err_t
  */
 esp_err_t find_drone(
-    camera_fb_t *frame,
+    const camera_fb_t *frame,
     pixels_cloud_t *pixels_cloud
 );
 
 #endif
+
+
+
+
+
+
+
+/**
+ * @brief makes as called
+ * 
+ * @param *mbp pixels_cloud_t destination to write
+ * @param frame camera_fb_t*
+ * @return pixels_cloud_t* which then needs to be freed
+ */
+esp_err_t find_sun(
+    pixels_cloud_t *pixels_cloud,
+    const camera_fb_t *frame
+);

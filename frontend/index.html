@@ -132,7 +132,7 @@ const ctx = canvas.getContext('2d');
 let wsCamera = null;
 let wsServoInput = null;
 let lastSendServoTime = 0;
-const THROTTLE_SERVO_INTERVAL = 200;
+const THROTTLE_SERVO_INTERVAL = 100;
 const INITIAL_SLIDER_VALUE = 90;
 
 function connectCameraWebSocket() {
@@ -221,7 +221,6 @@ function handleSliderChange(key, value) {
       console.warn('ServoInput WebSocket not connected');
     }
   }
-  // Reset slider to initial position (90)
   document.getElementById(key).value = INITIAL_SLIDER_VALUE;
 }
 

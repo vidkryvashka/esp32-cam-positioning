@@ -1,9 +1,11 @@
 #include <math.h>
 
-#include "img_processing/find_sun.h"
+#include "img_processing/vision_defs.h"
 #include "my_vector.h"
 
 #define TAG "my_find_sun"
+
+#define LOCAL_LOG_LEVEL     1
 
 
 #define STD_BRIGHTEST_PIXELS_COUNT 16
@@ -33,7 +35,7 @@ static esp_err_t balance_max_pixels_count(
     uint16_t pixels_divider = pixels_cloud->coords->size / STD_BRIGHTEST_PIXELS_COUNT + 1;
     vector_t *new_coords = vector_create(sizeof(pixel_coord_t));
     if (!new_coords) {
-        ESP_LOGE(TAG, "balance_max_pixels_count vector_create failed");
+        ESP_LOGE(TAG, "balance_max_pixels_count \t\t vector_create failed ");
         return ESP_FAIL;
     }
 
@@ -83,7 +85,7 @@ static esp_err_t find_max_brightness_pixels(
             if (brightness == max_brightness) {
                 pixel_coord_t coord = {x, y};
                 if (vector_push_back(pixels_cloud->coords, &coord) != ESP_OK) {
-                    ESP_LOGE(TAG, "find_max_brightness_pixels vector_push_back failed");
+                    ESP_LOGE(TAG, "find_max_brightness_pixels \t\t vector_push_back failed");
                     vector_clear(pixels_cloud->coords);
                     return ESP_FAIL;
                 }
@@ -98,15 +100,17 @@ static esp_err_t find_max_brightness_pixels(
         return ESP_FAIL;
     }
 
-    ESP_LOGI(TAG, "Found %zu / %zu max brightness pixels %d ", 
-            pixels_cloud->coords->size, orig_mbp_count, max_brightness);
+    #if LOCAL_LOG_LEVEL
+        ESP_LOGI(TAG, "Found %zu / %zu max brightness pixels %d ", 
+                pixels_cloud->coords->size, orig_mbp_count, max_brightness);
+    #endif
 
     calc_brightest_center(pixels_cloud);
     return ESP_OK;
 }
 
 
-esp_err_t mark_sun(
+esp_err_t find_sun(
     pixels_cloud_t *pixels_cloud,
     const camera_fb_t *frame
 ) {

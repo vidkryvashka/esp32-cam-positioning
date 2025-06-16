@@ -5,9 +5,11 @@
 #include "freertos/queue.h"
 
 
-#define SERVO_PAN_CH    LEDC_CHANNEL_1   // to pin 14
-#define SERVO_TILT_CH   LEDC_CHANNEL_2   // to pin 15
+#define SERVO_PAN_CHANNEL   LEDC_CHANNEL_1  // to pin 14
+#define SERVO_TILT_CHANNEL  LEDC_CHANNEL_2  // to pin 15
 
+
+#define ANGLE_THRESHOLD     5   // degrees ignore
 
 extern bool are_servos_inited;
 
@@ -15,16 +17,8 @@ extern bool are_servos_inited;
 extern QueueHandle_t servo_queue;
 
 
-/**
- * @brief   Seervos managing implemented via queue only with servo task
- * 
- * 
- */
+esp_err_t init_my_servos(void);
 
-esp_err_t init_my_servos();
-// esp_err_t deinit_my_servos();
-
-esp_err_t run_servo_manager();
-
+esp_err_t run_servo_manager(void);
 
 #endif

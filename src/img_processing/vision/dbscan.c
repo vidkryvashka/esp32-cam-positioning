@@ -1,15 +1,15 @@
 #include <math.h>
 #include <stdlib.h>
 
+#include "img_processing/vision_defs.h"
 
 #define TAG     "my_dbscan"
 
 
+#define LOCAL_LOG_LEVEL     0
+
 #define UNCLASSIFIED    -1
 #define NOISE           -2
-
-#include "img_processing/dbscan.h"
-
 
 static vector_t *local_coords_ref = NULL;
 static int *cluster_ids = NULL;
@@ -33,8 +33,8 @@ static esp_err_t dbscan_reboot(
 
 
 static esp_err_t get_neighbors(
-    size_t index,
-    double epsilon,
+    const size_t index,
+    const uint8_t epsilon,
     vector_t *neighbors
 ) {
     pixel_coord_t *point = (pixel_coord_t *)vector_get(local_coords_ref, index);
@@ -47,7 +47,7 @@ static esp_err_t get_neighbors(
         if (i == index)
             continue;
         pixel_coord_t *other = (pixel_coord_t *)vector_get(local_coords_ref, i);
-        if (sqrt(pow(point->x - other->x, 2) + pow(point->y - other->y, 2)) <= epsilon)
+        if (sqrt(pow(point->x - other->x, 2) + pow(point->y - other->y, 2)) <= (double)epsilon)
             if (vector_push_back(neighbors, &i) != ESP_OK) {
                 ESP_LOGE(TAG, "Failed to add neighbor ");
                 return ESP_FAIL;
@@ -58,10 +58,10 @@ static esp_err_t get_neighbors(
 
 
 static esp_err_t expand_cluster(
-    size_t index,
-    int cluster_id,
-    double epsilon,
-    uint min_points
+    const size_t index,
+    const int cluster_id,
+    const uint8_t epsilon,
+    const uint16_t min_points
 ) {
     vector_t *seeds = vector_create(sizeof(size_t));
     if (!seeds)
@@ -137,7 +137,7 @@ static esp_err_t calculate_cluster_centers(
                 pixel_coord_t *coord = (pixel_coord_t *)vector_get(local_coords_ref, i);
                 sum_x += coord->x;
                 sum_y += coord->y;
-                count++;
+                count ++;
             }
         }
 
@@ -156,12 +156,11 @@ static esp_err_t calculate_cluster_centers(
 
 static esp_err_t select_highest_center(
     pixels_cloud_t *pixels_cloud,
-    vector_t *cluster_centers
+    const vector_t *cluster_centers
 ) {
-    if (!pixels_cloud || !cluster_centers || !cluster_centers->size) {
-        ESP_LOGE(TAG, "select_highest_center no cloud|clusters no centers ");
-        pixels_cloud->center_coord.x = 0;
-        pixels_cloud->center_coord.y = 0;
+    if (!pixels_cloud || !cluster_centers) {
+        ESP_LOGE(TAG, "select_highest_center \t\t input error ");
+        pixels_cloud->center_coord = (pixel_coord_t){0,0};
         return ESP_FAIL;
     }
 
@@ -177,9 +176,13 @@ static esp_err_t select_highest_center(
     }
 
     if (highest_center) {
-        pixels_cloud->center_coord.x = highest_center->x;
-        pixels_cloud->center_coord.y = highest_center->y;
-        ESP_LOGI(TAG, "Selected highest center: (%d, %d)", pixels_cloud->center_coord.x, pixels_cloud->center_coord.y);
+        pixels_cloud->center_coord = (pixel_coord_t){
+            .x = highest_center->x,
+            .y = highest_center->y
+        };
+        #if LOCAL_LOG_LEVEL
+            ESP_LOGI(TAG, "Selected highest center: (%d, %d)", pixels_cloud->center_coord.x, pixels_cloud->center_coord.y);
+        #endif
         return ESP_OK;
     }
 
@@ -191,8 +194,8 @@ static esp_err_t select_highest_center(
 
 esp_err_t dbscan_cluster(
     pixels_cloud_t *pixels_cloud,
-    const double epsilon,
-    const uint min_points,
+    const uint8_t epsilon,
+    const uint16_t min_points,
     vector_t *cluster_centers
 ) {
     if (!pixels_cloud || !pixels_cloud->coords || !cluster_centers) {
@@ -206,16 +209,23 @@ esp_err_t dbscan_cluster(
     for (size_t i = 0; i < local_coords_ref->size; i++)
         if (cluster_ids[i] == UNCLASSIFIED)
             if (expand_cluster(i, cluster_id, epsilon, min_points) == ESP_OK)
-                cluster_id++;
+                cluster_id ++;
 
     esp_err_t calc_centers_err = calculate_cluster_centers(cluster_centers);
     if (calc_centers_err != ESP_OK) {
-        ESP_LOGE(TAG, "dbscan_cluster calc centers err ");
+        ESP_LOGE(TAG, "dbscan_cluster \t\t calc centers err ");
         return ESP_FAIL;
     }
 
-    select_highest_center(pixels_cloud, cluster_centers);
+    if (cluster_centers->size)
+        select_highest_center(pixels_cloud, cluster_centers);
+    #if LOCAL_LOG_LEVEL
+        else
+            ESP_LOGW(TAG, "dbscan_cluster \t no clusters ");
+    #endif
 
-    ESP_LOGI(TAG, "Found %d clusters ", cluster_centers->size);
+    #if LOCAL_LOG_LEVEL
+        ESP_LOGI(TAG, "Found %d clusters ", cluster_centers->size);
+    #endif
     return ESP_OK;
 }

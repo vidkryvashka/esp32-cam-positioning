@@ -4,14 +4,20 @@
 
 #define TAG "my_vector"
 
-#define INIT_CAPACITY 4
+#define INIT_CAPACITY   24
+#define REALLOC_COEF    2 // 1.5f
+
+#define LOCAL_LOG_FREE  0
 
 
 vector_t* vector_create(
     size_t sizeof_element
 ) {
     vector_t* vec = (vector_t *)heap_caps_malloc(sizeof(vector_t), MALLOC_CAP_SPIRAM);
-    if (!vec) return NULL;
+    if (!vec) {
+        ESP_LOGE(TAG, "vector_create \t\t couldn't malloc ");
+        return NULL;
+    }
     
     vec->data = calloc(INIT_CAPACITY, sizeof_element);
     vec->size = 0;
@@ -32,13 +38,13 @@ esp_err_t vector_reserve(
     }
 
     if (new_capacity <= vec->capacity) {
-        ESP_LOGE(TAG, "vector_reserve expected bigger capacity, not <= ");
+        ESP_LOGE(TAG, "vector_reserve \t\t expected bigger capacity, not <= ");
         return ESP_FAIL;
     }
     
     void *new_data = heap_caps_realloc(vec->data, new_capacity * vec->sizeof_element, MALLOC_CAP_SPIRAM);
     if (!new_data) {
-        ESP_LOGE(TAG, "vector_reserve realloc lost data ");
+        ESP_LOGE(TAG, "vector_reserve \t\t realloc lost data ");
         return ESP_FAIL;
     }
     
@@ -54,18 +60,18 @@ esp_err_t vector_push_back(
     const void *element
 ) {
     if (!vec || !element) {
-        ESP_LOGE(TAG, "vector_push_back (!vec || !element) ");
+        ESP_LOGE(TAG, "vector_push_back \t\t (!vec || !element) ");
         return ESP_FAIL;
     }
     
     if (vec->size >= vec->capacity) {
-        size_t new_capacity = (vec->capacity == 0) ? 8 : vec->capacity * 1.4f;
+        size_t new_capacity = (vec->capacity == 0) ? 8 : vec->capacity * REALLOC_COEF;
         vector_reserve(vec, new_capacity);
     }
     
     void *dest = (char*)vec->data + vec->size * vec->sizeof_element;
     memcpy(dest, element, vec->sizeof_element);
-    vec->size++;
+    vec->size ++;
 
     return ESP_OK;
 }
@@ -87,10 +93,10 @@ esp_err_t vector_set(vector_t *vec, const size_t index, void *val)
 
     void *dest = vec->data + index * vec->sizeof_element;
     if (!memcpy(dest, val, vec->sizeof_element)) {
-        ESP_LOGE(TAG, "failed to set element in vec ");
+        ESP_LOGE(TAG, "vector_set \t\t failed to set element in vec ");
         return ESP_FAIL;
     }
-    ++ vec->size;
+    vec->size ++;
     
     return ESP_OK;
 }
@@ -107,7 +113,6 @@ esp_err_t vector_print(
     switch (vec->sizeof_element) {
         case sizeof(uint8_t):           // size 1
         case sizeof(uint16_t):          // size 2
-
             snprintf(msg, msg_size,
                 "uintX_t vec size: %d cap: %d { ",
                 vec->size, vec->capacity
@@ -143,7 +148,7 @@ esp_err_t vector_print(
             break;
         
         default:
-            ESP_LOGI(TAG, "vector_print not implemented for this vector size %d\n", vec->sizeof_element);
+            ESP_LOGI(TAG, "vector_print \t\t not implemented for this vector size %d\n", vec->sizeof_element);
             return ESP_FAIL;
     }
 
@@ -157,8 +162,14 @@ esp_err_t vector_clear(
     vector_t *vec
 ) {
     if (vec) {
+        #if LOG_FREE && LOCAL_LOG_FREE
+            ESP_LOGI(TAG, "vector_clear \t free ");
+        #endif
         heap_caps_free(vec->data);
         vec->data = NULL;
+        #if LOG_FREE && LOCAL_LOG_FREE
+            ESP_LOGI(TAG, "vector_clear \t fried ");
+        #endif
         vec->size = 0;
         vec->capacity = 0;
         return ESP_OK;
@@ -173,11 +184,17 @@ esp_err_t vector_destroy(
     vector_t *vec
 ) {
     if (vec) {
+        #if LOG_FREE && LOCAL_LOG_FREE
+            ESP_LOGI(TAG, "vector_destroy \t fre vec & data ");
+        #endif
         heap_caps_free(vec->data);
         heap_caps_free(vec);
+        #if LOG_FREE && LOCAL_LOG_FREE
+            ESP_LOGI(TAG, "vector_destroy \t fried vec & data ");
+        #endif
         return ESP_OK;
     } else {
-        ESP_LOGE(TAG, "no vec\n");
+        ESP_LOGE(TAG, "vector_destroy \t\t no vec\n");
         return ESP_FAIL;
     }
 }
