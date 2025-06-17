@@ -8,7 +8,7 @@
 
 
 
-#define SERVOS_SPEED_MODE   LEDC_LOW_SPEED_MODE
+#define SERVOS_SPEED_MODE   LEDC_HIGH_SPEED_MODE
 
 #define SERVO_PAN_GPIO      GPIO_NUM_14
 #define SERVO_TILT_GPIO     GPIO_NUM_15
@@ -233,7 +233,7 @@ static esp_err_t set_duties(
             angle2duty((double)target_pan_angle / ANGLE_DIVIDER),
             MY_HPOINT
         );
-    vTaskDelay(pdMS_TO_TICKS(50));
+    vTaskDelay(pdMS_TO_TICKS(25));
     if (angles_diff->tilt != 0)
         pwm_err |= ledc_set_duty_and_update(
             SERVOS_SPEED_MODE,
@@ -241,7 +241,7 @@ static esp_err_t set_duties(
             angle2duty((double)target_tilt_angle / ANGLE_DIVIDER),
             MY_HPOINT
         );
-    vTaskDelay(pdMS_TO_TICKS(50));
+    vTaskDelay(pdMS_TO_TICKS(25));
 
     return pwm_err;
 }
@@ -262,19 +262,21 @@ static esp_err_t my_servos_change_angles(
     }
 
     uint8_t measured_pan_angle = duty2angle(ledc_get_duty(SERVOS_SPEED_MODE, SERVO_PAN_CHANNEL));
+    vTaskDelay(pdMS_TO_TICKS(25));
     uint8_t measured_tilt_angle = duty2angle(ledc_get_duty(SERVOS_SPEED_MODE, SERVO_TILT_CHANNEL));
+    vTaskDelay(pdMS_TO_TICKS(25));
 
     int16_t target_pan_angle = measured_pan_angle + angles_diff->pan;
     int16_t target_tilt_angle = measured_tilt_angle + angles_diff->tilt;
 
     check_normalize_angle_boundries(&target_pan_angle, &target_tilt_angle);
 
-    if (abs(target_pan_angle - (int16_t)measured_pan_angle) < ANGLE_THRESHOLD && abs(target_tilt_angle - (int16_t)measured_tilt_angle) < ANGLE_THRESHOLD)
+    if (abs(target_pan_angle - (int16_t)measured_pan_angle) < ANGLE_THRESHOLD &&
+        abs(target_tilt_angle - (int16_t)measured_tilt_angle) < ANGLE_THRESHOLD
+    )
         return ESP_OK;
 
     esp_err_t pwm_err = set_duties(angles_diff, target_pan_angle, target_tilt_angle);
-
-    // vTaskDelay(pdTICKS_TO_MS(50));
 
     #if LOCAL_LOG_LEVEL
         ESP_LOGI(TAG, "my_servos_change_angles \t  -- pan tilt: target %d° %d°  measured %d° %d° ",
